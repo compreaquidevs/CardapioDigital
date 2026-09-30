@@ -47,7 +47,6 @@
             padding-bottom: 80px;
         }
 
-        /* Banner de info da empresa NÃO FLUTUANTE (static/relative) */
         header {
             background-color: var(--header-bg);
             color: #ffffff;
@@ -215,7 +214,6 @@
             gap: 4px;
         }
 
-        /* FILTRO POR CATEGORIA FLUTUANTE NA TELA (STICKY) */
         .category-scroll {
             display: flex;
             gap: 8px;
@@ -1208,6 +1206,8 @@
         const EMPRESAS_URL = "https://gist.githubusercontent.com/gustavoamorimqueiroz1/48d44c95e0c3c8ecb376a23fd3bf4084/raw/empresas.txt";
         const GIST_PEDIDOS_URL = "https://gist.github.com/gustavoamorimqueiroz1/ad643ec5b741d4db180f63938e6ad518";
         const GIST_PEDIDOS_ID = "ad643ec5b741d4db180f63938e6ad518";
+        const GIST_NUMERO_PEDIDOS_URL = "https://gist.githubusercontent.com/gustavoamorimqueiroz1/15c252ac6fdce66429835aa34fe514f3/raw/numeorpedidos.txt";
+        const GIST_NUMERO_PEDIDOS_ID = "15c252ac6fdce66429835aa34fe514f3";
         const WHATSAPP_TARGET = "5533999648737";
         
         const GT = "gh" + retornaGT() + "dJCcY";
@@ -1223,6 +1223,11 @@
             'frango-frito', 'frangofrito', 'salgados', 'padaria',
             'acompanhamento', 'fitness', 'mercado', 'generico',
             'sobremesa', 'bebida'
+        ];
+
+        const MESES_NOME = [
+            "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+            "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
         ];
 
         function getCategoryOrder(cat) {
@@ -1246,7 +1251,9 @@
             adminLoggedCompany: null,
             adminGistData: null,
             pedidosLogged: false,
+            numeroPedidosLogged: false,
             pedidos: [],
+            numeroPedidosData: [],
             carouselIndex: 0,
             carouselInterval: null
         };
@@ -1294,15 +1301,31 @@
         }
 
         function safeJSONParse(rawText) {
+            if (!rawText) return [];
             try {
                 return JSON.parse(rawText);
             } catch (e) {
                 let cleaned = rawText
-                    .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+                    .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*=/g, '$1"$2":')
+                    .replace(/([{,]\s*)"([a-zA-Z0-9_]+)"\s*=/g, '$1"$2":')
+                    .replace(/:\s*=+/g, ':')
+                    .replace(/:\s*"([^"]*)"\s*=/g, ':"$1"')
                     .replace(/,\s*([\]}])/g, '$1')
                     .replace(/'/g, '"');
-                return JSON.parse(cleaned);
+                try {
+                    return JSON.parse(cleaned);
+                } catch (err2) {
+                    console.error("Erro no safeJSONParse:", err2, cleaned);
+                    return [];
+                }
             }
+        }
+
+        function getEmpresaKey(item) {
+            if (!item) return '';
+            let emp = item.empresa || item.id || '';
+            if (typeof emp === 'object' && emp.id) emp = emp.id;
+            return String(emp).replace(/^"|"$/g, '').replace('=', '').trim();
         }
 
         window.addEventListener('DOMContentLoaded', initApp);
@@ -1313,10 +1336,19 @@
         }
 
         function getQueryParams() {
+            const pathname = window.location.pathname;
             const params = new URLSearchParams(window.location.search);
+            let page = params.get('page');
+            
+            if (!page && pathname.toLowerCase().includes('/demo')) {
+                page = 'demo';
+            } else if (!page && pathname.toLowerCase().includes('/numeropedidos')) {
+                page = 'numeroPedidos';
+            }
+
             return {
                 empresa: params.get('empresa'),
-                page: params.get('page')
+                page: page
             };
         }
 
@@ -1364,6 +1396,11 @@
                 return;
             }
 
+            if (page === 'numeroPedidos' || page === 'numeropedidos') {
+                renderNumeroPedidosPage();
+                return;
+            }
+
             if (empresa) {
                 const company = state.empresas.find(e => e.id === empresa);
                 if (company) {
@@ -1374,29 +1411,38 @@
             }
 
             state.currentCompany = null;
-            renderCompaniesHub();
+            if (page === 'demo') {
+                renderCompaniesHub(true);
+            } else {
+                renderCompaniesHub(false);
+            }
         }
 
-        function renderCompaniesHub() {
+        function renderCompaniesHub(isDemoPage = false) {
             document.getElementById('cart-bar').style.display = 'none';
             document.getElementById('header-company-avatar').style.display = 'none';
-            document.getElementById('header-title').innerHTML = `<i class="fa-solid fa-utensils"></i> BonAPPetit - Cardápio Digital`;
+            document.getElementById('header-title').innerHTML = `<i class="fa-solid fa-utensils"></i> BonAPPetit - Cardápio Digital${isDemoPage ? ' (DEMO)' : ''}`;
             document.getElementById('header-subtitle').textContent = "Selecione um estabelecimento para fazer seu pedido";
             document.getElementById('company-info-container').innerHTML = `<p class="header-subtitle">Escolha uma opção abaixo</p>`;
 
             const container = document.getElementById('app-container');
 
-            if (state.empresas.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding: 40px 0;">Nenhuma empresa cadastrada no momento.</div>`;
+            const filteredCompanies = state.empresas.filter(emp => {
+                const isDemo = emp.demo === true || emp.demo === "true";
+                return isDemoPage ? isDemo : !isDemo;
+            });
+
+            if (filteredCompanies.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding: 40px 0;">Nenhuma empresa cadastrada no momento (${isDemoPage ? 'Demo' : 'Padrão'}).</div>`;
                 return;
             }
 
             let html = `
-                <div class="section-title">Nossas Lojas</div>
+                <div class="section-title">Nossas Lojas ${isDemoPage ? '(Ambiente de Demonstração)' : ''}</div>
                 <div class="company-list">
             `;
 
-            state.empresas.forEach(emp => {
+            filteredCompanies.forEach(emp => {
                 const imgLogo = emp.link_img || (emp.id === 'lanches-avenida' 
                     ? 'https://raw.githubusercontent.com/gustavoamorimqueiroz1/CompreAquiImages/refs/heads/master/Customers/lanches_av.png' 
                     : 'https://raw.githubusercontent.com/gustavoamorimqueiroz1/CompreAquiImages/refs/heads/master/Customers/pizzaria.png');
@@ -1422,11 +1468,14 @@
 
             html += `</div>`;
 
-            html += `
-                <div style="text-align: center; margin-top: 25px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+             html += `
+                <div style="text-align: center; margin-top: 25px; display: flex; flex-direction: row; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <button class="admin-footer-btn" onclick="openAdminPortal()">
                         <i class="fa-solid fa-user-gear"></i> PortalADMIN
                     </button>
+                    <!-- <button class="admin-footer-btn" style="background:#0284c7;" onclick="openNumeroPedidosPage()"> -->
+                        <!-- <i class="fa-solid fa-chart-line"></i> Relatório Pedidos/Mês -->
+                    <!-- </button> -->
                 </div>
             `;
 
@@ -1435,6 +1484,10 @@
 
         function selectCompany(companyId) {
             window.location.search = `?empresa=${companyId}`;
+        }
+
+        function openNumeroPedidosPage() {
+            window.location.search = '?page=numeroPedidos';
         }
 
         async function loadCompanyMenu(company) {
@@ -1478,7 +1531,7 @@
                     const res = await fetch(company.link);
                     rawText = await res.text();
                 } catch {
-                    // fallback de dados
+                    // fallback
                 }
 
                 const data = safeJSONParse(rawText);
@@ -1945,6 +1998,8 @@
                 return;
             }
 
+            showToast("Processando e enviando seu pedido...");
+
             const enderecoFormatado = `${logInput.value.trim()}, nº ${numInput.value.trim()} - ${baiInput.value.trim()}`;
 
             const pedidoPayload = {
@@ -1959,6 +2014,7 @@
             };
 
             await registrarPedidoNoGist(pedidoPayload);
+            await incrementarNumeroPedidosMes(state.currentCompany ? state.currentCompany.id : "");
 
             let msg = `* NOVO PEDIDO - ${state.currentCompany ? state.currentCompany.nome.toUpperCase() : 'CARDÁPIO'}*\n\n`;
             msg += `*Cliente:* ${nomeInput.value.trim()}\n`;
@@ -1987,7 +2043,6 @@
 
             window.open(whatsappUrl, '_blank');
 
-            // Pergunta se deseja limpar o carrinho ao enviar o pedido
             setTimeout(() => {
                 if (confirm("Seu pedido foi enviado no WhatsApp. Deseja limpar o carrinho agora?")) {
                     resetCart();
@@ -1996,6 +2051,68 @@
                     showToast("Pedido enviado com sucesso!");
                 }
             }, 600);
+        }
+
+        async function incrementarNumeroPedidosMes(empresaId) {
+            if (!empresaId) return;
+            try {
+                const res = await fetch(`https://api.github.com/gists/${GIST_NUMERO_PEDIDOS_ID}`, {
+                    headers: { 'Authorization': `token ${GT}` }
+                });
+                const gistData = await res.json();
+                let listData = [];
+                if (gistData.files && gistData.files["numeorpedidos.txt"]) {
+                    listData = safeJSONParse(gistData.files["numeorpedidos.txt"].content);
+                }
+
+                const currentNow = new Date();
+                const currentMonthName = MESES_NOME[currentNow.getMonth()];
+                const currentYear = currentNow.getFullYear();
+
+                const norm = (s) => (s || '').replace('=', '').replace(/^"|"$/g, '').trim().toLowerCase();
+
+                let empObj = listData.find(e => norm(e.empresa) === norm(empresaId));
+
+                if (!empObj) {
+                    empObj = { empresa: empresaId, pedidos: [] };
+                    listData.push(empObj);
+                }
+
+                if (!empObj.pedidos) empObj.pedidos = [];
+
+                let mesObj = empObj.pedidos.find(p => {
+                    const matchMes = p.mes && p.mes.toLowerCase() === currentMonthName;
+                    const pAno = p.ano ? parseInt(p.ano) : currentYear;
+                    return matchMes && pAno === currentYear;
+                });
+
+                if (mesObj) {
+                    mesObj.numeropedidos = (parseInt(mesObj.numeropedidos) || 0) + 1;
+                    if (!mesObj.ano) mesObj.ano = currentYear;
+                } else {
+                    empObj.pedidos.push({
+                        ano: currentYear,
+                        mes: currentMonthName,
+                        numeropedidos: 1
+                    });
+                }
+
+                await fetch(`https://api.github.com/gists/${GIST_NUMERO_PEDIDOS_ID}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${GT}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            "numeorpedidos.txt": { content: JSON.stringify(listData, null, 2) }
+                        }
+                    })
+                });
+            } catch (err) {
+                console.error("Erro ao incrementar número de pedidos:", err);
+            }
         }
 
         document.getElementById('c-telefone').addEventListener('input', function (e) {
@@ -2152,9 +2269,11 @@
             }
         }
 
-        function handleAdminLogin(_0x2d4f){_0x2d4f['\x70\x72\x65\x76\x65\x6e\x74\x44\x65\x66\x61\x75\x6c\x74']();var _0x1b3a=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x61\x64\x6d\x2d\x75\x73\x65\x72')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();var _0x4e5c=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x61\x64\x6d\x2d\x70\x61\x73\x73')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();var _0x8d9e=state['\x65\x6d\x70\x72\x65\x73\x61\x73']['\x66\x69\x6e\x64'](function(_0x6f7a){var _0x3a2b=''+_0x6f7a['\x69\x64']+_0x6f7a['\x69\x64\x32']+'\x40';return _0x6f7a['\x69\x64']['\x74\x6f\x4c\x6f\x77\x65\x72\x43\x61\x73\x65']()===_0x1b3a['\x74\x6f\x4c\x6f\x77\x65\x72\x43\x61\x73\x65']()&&_0x3a2b===_0x4e5c;});if(_0x8d9e){state['\x61\x64\x6d\x69\x6e\x4c\x6f\x67\x67\x65\x64\x43\x6f\x6d\x70\x61\x6e\x79']=_0x8d9e;showToast('\x42\x65\x6d\x2d\x76\x69\x6e\x64\x6f\x2c\x20'+_0x8d9e['\x6e\x6f\x6d\x65']+'\x21');renderAdminDashboard();}else{showToast('\x1f\x532\x20\x4c\x6f\x67\x69\x6e\x20\x69\x6e\x76\xc3\xa1\x6c\x69\x64\x6f\x21');}}
+        function handleAdminLogin(_0x2d4f){_0x2d4f['\x70\x72\x65\x76\x65\x6e\x74\x44\x65\x66\x61\x75\x6c\x74']();var _0x1b3a=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x61\x64\x6d\x2d\x75\x73\x65\x72')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();var _0x4e5c=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x61\x64\x6d\x2d\x70\x61\x73\x73')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();var _0x8d9e=state['\x65\x6d\x70\x72\x65\x73\x61\x73']['\x66\x69\x6e\x64'](function(_0x6f7a){var _0x3a2b=''+_0x6f7a['\x69\x64']+_0x6f7a['\x69\x64\x33']+'\x40';return _0x6f7a['\x69\x64']['\x74\x6f\x4c\x6f\x77\x65\x72\x43\x61\x73\x65']()===_0x1b3a['\x74\x6f\x4c\x6f\x77\x65\x72\x43\x61\x73\x65']()&&_0x3a2b===_0x4e5c;});if(_0x8d9e){state['\x61\x64\x6d\x69\x6e\x4c\x6f\x67\x67\x65\x64\x43\x6f\x6d\x70\x61\x6e\x79']=_0x8d9e;showToast('\x42\x65\x6d\x2d\x76\x69\x6e\x64\x6f\x2c\x20'+_0x8d9e['\x6e\x6f\x6d\x65']+'\x21');renderAdminDashboard();}else{showToast('\x1f\x532\x20\x4c\x6f\x67\x69\x6e\x20\x69\x6e\x76\xc3\xa1\x6c\x69\x64\x6f\x21');}}
 
         async function fetchAdminCompanyData() {
+            if (state.adminGistData) return state.adminGistData;
+
             const emp = state.adminLoggedCompany;
             let rawText;
             try {
@@ -2172,7 +2291,7 @@
             const container = document.getElementById('app-container');
             const emp = state.adminLoggedCompany;
 
-            container.innerHTML = `<div class="loader-container"><div class="spinner"></div><p>Buscando dados atualizados...</p></div>`;
+            container.innerHTML = `<div class="loader-container"><div class="spinner"></div><p>Buscando dados...</p></div>`;
 
             const data = await fetchAdminCompanyData();
             const productos = data[0].produtos || [];
@@ -2496,23 +2615,22 @@
                 if (response.ok) {
                     const gistResponseData = await response.json();
                     
-                    if (gistResponseData.files && gistResponseData.files[fileName] && gistResponseData.files[fileName].raw_url) {
-                        const newRawUrl = gistResponseData.files[fileName].raw_url;
-                        
-                        if (state.adminLoggedCompany) {
-                            state.adminLoggedCompany.link = newRawUrl;
+                    if (gistResponseData.files && gistResponseData.files[fileName]) {
+                        if (gistResponseData.files[fileName].content) {
+                            state.adminGistData = safeJSONParse(gistResponseData.files[fileName].content);
                         }
-
-                        const empIndex = state.empresas.findIndex(e => e.id === empId);
-                        if (empIndex !== -1) {
-                            state.empresas[empIndex].link = newRawUrl;
+                        if (gistResponseData.files[fileName].raw_url) {
+                            const newRawUrl = gistResponseData.files[fileName].raw_url;
+                            if (state.adminLoggedCompany) state.adminLoggedCompany.link = newRawUrl;
+                            const empIndex = state.empresas.findIndex(e => e.id === empId);
+                            if (empIndex !== -1) state.empresas[empIndex].link = newRawUrl;
                         }
                     }
 
                     showToast("✅ Salvo e atualizado com sucesso!");
                     return true;
                 } else {
-                    showToast("⚠️️ Não foi possível salvar.");
+                    showToast("⚠ Não foi possível salvar.");
                     return false;
                 }
             } catch (err) {
@@ -2665,12 +2783,210 @@
             container.innerHTML = html;
         }
 
+        function handleNumeroPedidosLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('num-ped-user').value.trim();
+            const p = document.getElementById('num-ped-pass').value.trim();
+            if (u === atob('YWRtaW4=') && p === atob('MjAyNg==')) {
+                state.numeroPedidosLogged = true;
+                showToast("Acesso concedido!");
+                renderNumeroPedidosPage();
+            } else {
+                showToast("Usuario ou senha incorretos!");
+            }
+        }
+
+        async function renderNumeroPedidosPage() {
+            document.getElementById('cart-bar').style.display = 'none';
+            document.getElementById('header-company-avatar').style.display = 'none';
+            document.getElementById('header-title').innerHTML = `<i class="fa-solid fa-chart-line"></i> Número de Pedidos / Mês`;
+            document.getElementById('header-subtitle').textContent = "Relatório mensal de vendas por empresa";
+
+            const container = document.getElementById('app-container');
+
+            if (!state.numeroPedidosLogged) {
+                container.innerHTML = `
+                    <div class="page-view">
+                        <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 12px; text-align:center;">Login - Número de Pedidos</h2>
+                        <form onsubmit="handleNumeroPedidosLogin(event)" style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="form-group">
+                                <label class="form-label" for="num-ped-user">Usuário *</label>
+                                <input type="text" id="num-ped-user" class="form-control" placeholder="Usuário" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="num-ped-pass">Senha *</label>
+                                <input type="password" id="num-ped-pass" class="form-control" placeholder="Senha" required>
+                            </div>
+                            <button type="submit" class="btn-submit">
+                                <i class="fa-solid fa-right-to-bracket"></i> Entrar
+                            </button>
+                        </form>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `<div class="loader-container"><div class="spinner"></div><p>Buscando dados de pedidos...</p></div>`;
+
+            let numData = [];
+            try {
+                const res = await fetch(GIST_NUMERO_PEDIDOS_URL);
+                const rawText = await res.text();
+                numData = safeJSONParse(rawText);
+            } catch (e) {
+                console.error("Erro ao carregar numero de pedidos:", e);
+                numData = [];
+            }
+
+            state.numeroPedidosData = numData;
+
+            let empOptions = `<option value="todas">Todas as Empresas</option>`;
+            let empresasMap = new Set();
+            numData.forEach(item => {
+                const empNome = getEmpresaKey(item);
+                if (empNome) empresasMap.add(empNome);
+            });
+            state.empresas.forEach(emp => {
+                if (emp.id) empresasMap.add(emp.id);
+            });
+            empresasMap.forEach(eKey => {
+                const companyObj = state.empresas.find(emp => emp.id === eKey);
+                const label = companyObj ? companyObj.nome : eKey;
+                empOptions += `<option value="${eKey}">${label}</option>`;
+            });
+
+            let mesOptions = `<option value="todos">Todos os Meses</option>`;
+            MESES_NOME.forEach(m => {
+                mesOptions += `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`;
+            });
+
+            let anosSet = new Set();
+            numData.forEach(item => {
+                (item.pedidos || []).forEach(p => {
+                    if (p.ano !== undefined && p.ano !== null && p.ano !== "") {
+                        anosSet.add(parseInt(p.ano));
+                    }
+                });
+            });
+
+            const currentYear = new Date().getFullYear();
+            anosSet.add(currentYear);
+
+            let anoOptions = `<option value="todos">Todos os Anos</option>`;
+            Array.from(anosSet).sort((a, b) => b - a).forEach(a => {
+                anoOptions += `<option value="${a}" ${a === currentYear ? 'selected' : ''}>${a}</option>`;
+            });
+
+            container.innerHTML = `
+                <div class="page-view">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3 style="font-size:1.1rem; font-weight:800;">Histórico por Empresa / Mês</h3>
+                        <button onclick="state.numeroPedidosLogged=false; renderNumeroPedidosPage();" style="background:#e5e7eb; border:none; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer;">Sair</button>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+                        <div class="form-group">
+                            <label class="form-label">Filtrar por Empresa:</label>
+                            <select id="filter-numped-emp" class="form-control" onchange="filterNumeroPedidosView()">
+                                ${empOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Filtrar por Ano:</label>
+                            <select id="filter-numped-ano" class="form-control" onchange="filterNumeroPedidosView()">
+                                ${anoOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Filtrar por Mês:</label>
+                            <select id="filter-numped-mes" class="form-control" onchange="filterNumeroPedidosView()">
+                                ${mesOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="numero-pedidos-list-container"></div>
+
+                    <div style="text-align:center; margin-top:16px;">
+                        <button onclick="window.location.href='index.html'" class="btn-submit">
+                            <i class="fa-solid fa-house"></i> Voltar ao Início
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            filterNumeroPedidosView();
+        }
+
+        function filterNumeroPedidosView() {
+            const selectedEmp = document.getElementById('filter-numped-emp').value;
+            const selectedAno = document.getElementById('filter-numped-ano').value;
+            const selectedMes = document.getElementById('filter-numped-mes').value;
+            const container = document.getElementById('numero-pedidos-list-container');
+
+            let html = '';
+            let totalGeral = 0;
+
+            state.numeroPedidosData.forEach(item => {
+                const empKey = getEmpresaKey(item);
+                if (selectedEmp !== 'todas' && empKey !== selectedEmp) return;
+
+                const companyObj = state.empresas.find(e => e.id === empKey);
+                const displayNome = companyObj ? companyObj.nome : empKey;
+
+                let pedidosMeses = item.pedidos || [];
+                let filteredMeses = pedidosMeses.filter(p => {
+                    if (selectedAno !== 'todos') {
+                        const pAno = p.ano !== undefined ? parseInt(p.ano) : null;
+                        if (pAno !== parseInt(selectedAno)) return false;
+                    }
+                    if (selectedMes !== 'todos' && p.mes && p.mes.toLowerCase() !== selectedMes.toLowerCase()) return false;
+                    return true;
+                });
+
+                if (filteredMeses.length > 0) {
+                    html += `
+                        <div class="admin-card" style="border-left: 4px solid var(--accent-yellow);">
+                            <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px; color:var(--text-dark);">
+                                🏢 ${displayNome}
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                    `;
+
+                    filteredMeses.forEach(m => {
+                        const qtd = parseInt(m.numeropedidos) || 0;
+                        totalGeral += qtd;
+                        const anoStr = m.ano !== undefined ? ` (${m.ano})` : '';
+                        html += `
+                            <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:6px; background:#f9fafb; border-radius:6px; border:1px solid #e5e7eb;">
+                                <span style="text-transform:capitalize; font-weight:600;">📅 ${m.mes}${anoStr}</span>
+                                <span style="font-weight:800; color:#059669;">${qtd} pedido(s)</span>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div></div>`;
+                }
+            });
+
+            if (!html) {
+                container.innerHTML = `<p style="text-align:center; color:#6b7280; margin:20px 0;">Nenhum registro encontrado para os filtros selecionados.</p>`;
+                return;
+            }
+
+            html += `<div style="font-size:0.95rem; font-weight:800; text-align:center; margin-top:12px; color:var(--text-dark);">Total de Pedidos no Filtro: ${totalGeral}</div>`;
+
+            container.innerHTML = html;
+        }
+
         function retornaEmpresas(){
             return `[
                  {
                   "empresa": {
                     "id": "lanches-avenida",
                     "id2": "1",
+                    "id3": "1",
+					"demo": "true",
                     "link": "https://gist.githubusercontent.com/gustavoamorimqueiroz1/ffa6262e6c52acfcc27c3bbaf57f0f4e/raw/produtos_.txt",
                     "link_img": "https://raw.githubusercontent.com/gustavoamorimqueiroz1/CompreAquiImages/refs/heads/master/Customers/lanches_av.png",
                     "nome": "Dr. Burguer",
@@ -2712,6 +3028,8 @@
                   "empresa": {
                     "id": "pizzaria-peperoni",
                     "id2": "2",
+                    "id3": "2",
+                    "demo": "false",
                     "link_img": "https://raw.githubusercontent.com/gustavoamorimqueiroz1/CompreAquiImages/refs/heads/master/Customers/pizzaria.png",
                     "link": "https://gist.githubusercontent.com/gustavoamorimqueiroz1/ae96b99917a000a43660401119b89efb/raw/produtosPizzaria_.txt",
                     "nome": "Pizzaria Peperoni",
