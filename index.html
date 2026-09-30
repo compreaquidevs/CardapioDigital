@@ -47,13 +47,13 @@
             padding-bottom: 80px;
         }
 
+        /* Banner de info da empresa NÃO FLUTUANTE (static/relative) */
         header {
             background-color: var(--header-bg);
             color: #ffffff;
             padding: 16px;
-            position: sticky;
-            top: 0;
-            z-index: 40;
+            position: relative;
+            z-index: 10;
             box-shadow: var(--shadow-md);
         }
 
@@ -215,12 +215,18 @@
             gap: 4px;
         }
 
+        /* FILTRO POR CATEGORIA FLUTUANTE NA TELA (STICKY) */
         .category-scroll {
             display: flex;
             gap: 8px;
             overflow-x: auto;
-            padding-bottom: 8px;
-            margin-bottom: 16px;
+            padding: 12px 16px;
+            margin: -16px -16px 16px -16px;
+            background: var(--bg-color);
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             scrollbar-width: none;
         }
 
@@ -667,10 +673,6 @@
             display: none;
         }
 
-        .input-error {
-            border-color: var(--danger-color) !important;
-        }
-
         .toast {
             position: fixed;
             top: 20px;
@@ -768,18 +770,6 @@
             letter-spacing: 0.3px;
         }
 
-        .footer-powered-link {
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .footer-powered strong {
-            background: linear-gradient(135deg, #f59e0b, #ef4444);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
-        }
-
         .legal-link-container {
             margin-top: 6px;
         }
@@ -815,10 +805,6 @@
             align-items: center;
             gap: 8px;
             box-shadow: var(--shadow-sm);
-        }
-
-        .admin-footer-btn:hover {
-            background: #0f172a;
         }
 
         .admin-card {
@@ -882,53 +868,49 @@
             margin-bottom: 8px;
         }
 
-
-		.footer-credits {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			gap: 8px;
-			margin: 40px auto 20px auto;
-			padding: 12px 24px;
-			width: fit-content;
-			background: rgba(255, 255, 255, 0.05);
-			border: 1px solid rgba(0, 0, 0, 0.08);
-			border-radius: 30px;
-			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-			font-size: 13px;
-			color: #666;
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-			transition: all 0.3s ease;
-			cursor: pointer;
-		}
-		
-		/* Efeito ao passar o mouse */
-		.footer-credits:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
-			background: #fff;
-			border-color: #ffc107; /* Cor de destaque */
-			color: #222;
-		}
-		
-		/* Ícone de código (Developers) */
-		.footer-icon {
-			width: 16px;
-			height: 16px;
-			color: #ffc107; /* Cor do ícone de chaves de código */
-			transition: transform 0.3s ease;
-		}
-		
-		.footer-credits:hover .footer-icon {
-			transform: scale(1.15);
-		}
-		
-		/* Estilo do nome da marca */
-		.brand-name {
-			color: #222;
-			font-weight: 700;
-			letter-spacing: 0.5px;
-		}
+        .footer-credits {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 40px auto 20px auto;
+            padding: 12px 24px;
+            width: fit-content;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 30px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 13px;
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .footer-credits:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+            background: #fff;
+            border-color: #ffc107;
+            color: #222;
+        }
+        
+        .footer-icon {
+            width: 16px;
+            height: 16px;
+            color: #ffc107;
+            transition: transform 0.3s ease;
+        }
+        
+        .footer-credits:hover .footer-icon {
+            transform: scale(1.15);
+        }
+        
+        .brand-name {
+            color: #222;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
     </style>
     <link id="favicon" rel="icon" type="image/png" href="https://scontent-gig4-2.cdninstagram.com/v/t51.82787-15/620417266_18105247282706287_2063464713456114473_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjM1NzgwOTY5NTc4OTg0NjY2MQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuMTAwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=h--OE3p9ulYQ7kNvwEC-J1q&_nc_oc=AdoxfW0kqiYNj3f3DJHLBKKxKm0bFkkiPWVkGJ0gej0yPCGi0yNol7qL5FyU_U-fe68&_nc_zt=23&_nc_ht=scontent-gig4-2.cdninstagram.com&_nc_gid=rWqifgXu8BNB313Z3tsgkg&_nc_ss=70689&oh=00_AQM6pzni0dw_-Pf-sEOS1TL8zmYxex_Jp_YKrySWTCk4yw&oe=6AC19693">
 </head>
@@ -1154,9 +1136,7 @@
 
                 <div class="form-group">
                     <label class="form-label">Composições Vinculadas (Selecione N Composições)</label>
-                    <div id="adm-prod-compostos-checkboxes" class="options-list" style="max-height: 150px; overflow-y: auto;">
-                        <!-- Checkboxes de composições gerados dinamicamente -->
-                    </div>
+                    <div id="adm-prod-compostos-checkboxes" class="options-list" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
 
                 <button type="submit" class="btn-submit" style="margin-top: 10px;">
@@ -1166,7 +1146,7 @@
         </div>
     </div>
 
-    <!-- Modal Admin Composição (Grupo com N opções) -->
+    <!-- Modal Admin Composição -->
     <div class="modal-overlay" id="admin-composto-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1211,9 +1191,7 @@
                             <i class="fa-solid fa-plus"></i> Add Item
                         </button>
                     </div>
-                    <div id="comp-items-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-                        <!-- Linhas dinâmicas de itens da composição -->
-                    </div>
+                    <div id="comp-items-container" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
                 </div>
 
                 <button type="submit" class="btn-submit" style="margin-top: 10px;">
@@ -1232,34 +1210,19 @@
         const GIST_PEDIDOS_ID = "ad643ec5b741d4db180f63938e6ad518";
         const WHATSAPP_TARGET = "5533999648737";
         
-        const GT ="gh"+retornaGT()+"dJCcY";
+        const GT = "gh" + retornaGT() + "dJCcY";
 
         const GIST_IDS = {
             "lanches-avenida": "ffa6262e6c52acfcc27c3bbaf57f0f4e",
             "pizzaria-peperoni": "ae96b99917a000a43660401119b89efb"
         };
 
-        // Ordem de prioridade para ordenação das categorias
         const CATEGORY_PRIORITY = [
-            'hamburguer',
-            'burguer',
-            'pizza',
-            'prato',
-            'almoco',
-            'culinariadiversas',
-            'sanduíches',
-            'sanduiches',
-            'hotdog',
-            'frango-frito',
-            'frangofrito',
-            'salgados',
-            'padaria',
-            'acompanhamento',
-            'fitness',
-            'mercado',
-            'generico',
-            'sobremesa',
-            'bebida'
+            'hamburguer', 'burguer', 'pizza', 'prato', 'almoco',
+            'culinariadiversas', 'sanduíches', 'sanduiches', 'hotdog',
+            'frango-frito', 'frangofrito', 'salgados', 'padaria',
+            'acompanhamento', 'fitness', 'mercado', 'generico',
+            'sobremesa', 'bebida'
         ];
 
         function getCategoryOrder(cat) {
@@ -1358,26 +1321,25 @@
         }
 
         async function fetchCompanies() {
-			try {
-				const rawText = retornaEmpresas();
-				const data = safeJSONParse(rawText);
-				
-				state.empresas = data
-					.map(item => item.empresa)
-					.filter(emp => emp && emp.ativa !== false)
-					.map(emp => {
-						// Recupera o link salvo no sessionStorage, se existir
-						const savedLink = sessionStorage.getItem(`empresa_link_${emp.id}`);
-						if (savedLink) {
-							emp.link = savedLink;
-						}
-						return emp;
-					});
-			} catch (err) {
-				console.error("Erro ao carregar empresas:", err);
-				showToast("Erro ao carregar lista de estabelecimentos.");
-			}
-		}
+            try {
+                const rawText = retornaEmpresas();
+                const data = safeJSONParse(rawText);
+                
+                state.empresas = data
+                    .map(item => item.empresa)
+                    .filter(emp => emp && emp.ativa !== false)
+                    .map(emp => {
+                        const savedLink = sessionStorage.getItem(`empresa_link_${emp.id}`);
+                        if (savedLink) {
+                            emp.link = savedLink;
+                        }
+                        return emp;
+                    });
+            } catch (err) {
+                console.error("Erro ao carregar empresas:", err);
+                showToast("Erro ao carregar lista de estabelecimentos.");
+            }
+        }
 
         function handleRouting() {
             const { empresa, page } = getQueryParams();
@@ -1516,7 +1478,7 @@
                     const res = await fetch(company.link);
                     rawText = await res.text();
                 } catch {
-                    // rawText = retornaProdutos(company.id);
+                    // fallback de dados
                 }
 
                 const data = safeJSONParse(rawText);
@@ -1537,7 +1499,6 @@
         function renderCompanyProductsView() {
             const container = document.getElementById('app-container');
 
-            // Ordena as categorias únicas para exibição dos chips
             let sortedCategories = Array.from(new Set(state.products.map(p => p.categoria)))
                 .sort((a, b) => getCategoryOrder(a) - getCategoryOrder(b));
 
@@ -1547,7 +1508,6 @@
                 catChipsHtml += `<button class="category-chip ${state.selectedCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat}')">${cat}</button>`;
             });
 
-            // Ordena os produtos de acordo com a prioridade das categorias
             let filteredProducts = (state.selectedCategory === 'todas'
                 ? state.products
                 : state.products.filter(p => p.categoria === state.selectedCategory))
@@ -1560,7 +1520,7 @@
                 productsHtml += `<p style="font-size:0.85rem; color:#6b7280; text-align:center; padding: 20px;">Nenhum produto nesta categoria.</p>`;
             } else {
                 filteredProducts.forEach((prod, index) => {
-                    const catKey = prod.categoria;
+                    const catKey = prod.categoria ? prod.categoria.toLowerCase().trim() : 'generico';
                     const imgUrl = CATEGORY_IMAGES[catKey] || CATEGORY_IMAGES['generico'];
                     
                     productsHtml += `
@@ -1602,15 +1562,14 @@
             const footerHtml = `
             <footer class="footer-powered">
                 <div class="footer-credits" onclick="openEmpresaPage()">
-		        <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-			        <polyline points="16 18 22 12 16 6"></polyline>
-			        <polyline points="8 6 2 12 8 18"></polyline>
-		            </svg>
-		            <span>powered by <strong class="brand-name">&lt;COMPREAQUIDEVS - BonAPPettit&gt;</strong></span>
-	                
+                    <svg class="footer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    <span>powered by <strong class="brand-name">&lt;COMPREAQUIDEVS - BonAPPettit&gt;</strong></span>
                 </div>
                 <div class="legal-link-container">
-                        <a class="legal-link" href="?page=politicas" target="_blank">Políticas e Termos de Uso</a>
+                    <a class="legal-link" href="?page=politicas" target="_blank">Políticas e Termos de Uso</a>
                 </div>
             </footer>
             `;
@@ -2024,21 +1983,24 @@
             msg += `*TOTAL DO PEDIDO:* ${formatMoney(total)}\n`;
 
             const encodedMsg = encodeURIComponent(msg);
-			
-            const whatsappUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_TARGET}?text=${encodedMsg}`;
+            const whatsappUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_TARGET}&text=${encodedMsg}`;
 
             window.open(whatsappUrl, '_blank');
 
+            // Pergunta se deseja limpar o carrinho ao enviar o pedido
             setTimeout(() => {
-                if (confirm("Seu pedido foi finalizado e enviado no WhatsApp?")) {
+                if (confirm("Seu pedido foi enviado no WhatsApp. Deseja limpar o carrinho agora?")) {
                     resetCart();
-                    showToast("Pedido finalizado com sucesso!");
+                    showToast("Carrinho limpo e pedido concluído!");
+                } else {
+                    showToast("Pedido enviado com sucesso!");
                 }
             }, 600);
         }
-         document.getElementById('c-telefone').addEventListener('input', function (e) {
-			e.target.value = e.target.value.replace(/\D/g, '');
-		});
+
+        document.getElementById('c-telefone').addEventListener('input', function (e) {
+            e.target.value = e.target.value.replace(/\D/g, '');
+        });
 
         async function registrarPedidoNoGist(pedido) {
             try {
@@ -2146,8 +2108,8 @@
                     </div>
 
                     <div style="text-align: center;">
-                        <button onclick="window.location.href='index.html'" class="btn-submit">
-                            <i class="fa-solid fa-house"></i> Voltar ao Início
+                        <button onclick="window.history.back()" class="btn-submit">
+                            <i class="fa-solid fa-arrow-left"></i> Voltar
                         </button>
                     </div>
                 </div>
@@ -2406,170 +2368,159 @@
             `;
             container.appendChild(row);
         }
-		async function saveAdminComposto(e) {
-			e.preventDefault();
-			const emp = state.adminLoggedCompany;
-			const data = state.adminGistData;
-			const idx = parseInt(document.getElementById('adm-comp-index').value);
 
-			if (!data[0].compostos) data[0].compostos = [];
+        async function saveAdminComposto(e) {
+            e.preventDefault();
+            const emp = state.adminLoggedCompany;
+            const data = state.adminGistData;
+            const idx = parseInt(document.getElementById('adm-comp-index').value);
 
-			const nomeGrupo = document.getElementById('adm-comp-nome-grupo').value.trim();
-			const cat = document.getElementById('adm-comp-cat').value;
+            if (!data[0].compostos) data[0].compostos = [];
 
-			const itemRows = document.querySelectorAll('.comp-item-row');
-			const itens = [];
-			itemRows.forEach(row => {
-				const n = row.querySelector('.comp-item-nome').value.trim();
-				const p = parseFloat(row.querySelector('.comp-item-preco').value) || 0;
-				if (n) itens.push({ nome: n, preco: p });
-			});
+            const nomeGrupo = document.getElementById('adm-comp-nome-grupo').value.trim();
+            const cat = document.getElementById('adm-comp-cat').value;
 
-			const novaComposicao = {
-				nome: nomeGrupo,
-				categoria: cat,
-				itens: itens
-			};
+            const itemRows = document.querySelectorAll('.comp-item-row');
+            const itens = [];
+            itemRows.forEach(row => {
+                const n = row.querySelector('.comp-item-nome').value.trim();
+                const p = parseFloat(row.querySelector('.comp-item-preco').value) || 0;
+                if (n) itens.push({ nome: n, preco: p });
+            });
 
-			if (idx >= 0) {
-				data[0].compostos[idx] = novaComposicao;
-			} else {
-				data[0].compostos.push(novaComposicao);
-			}
+            const novaComposicao = {
+                nome: nomeGrupo,
+                categoria: cat,
+                itens: itens
+            };
 
-			closeAdminCompostoModal();
-			await updateGistOnGitHub(emp.id, data);
-			
-			// Força o recarregamento dos dados e a re-renderização do painel
-			await renderAdminDashboard();
-		}
+            if (idx >= 0) {
+                data[0].compostos[idx] = novaComposicao;
+            } else {
+                data[0].compostos.push(novaComposicao);
+            }
 
-		async function deleteAdminComposto(idx) {
-			if (!confirm("Tem certeza que deseja excluir esta tabela de composição?")) return;
-			const emp = state.adminLoggedCompany;
-			const data = state.adminGistData;
+            closeAdminCompostoModal();
+            await updateGistOnGitHub(emp.id, data);
+            await renderAdminDashboard();
+        }
 
-			const compostoRemovido = data[0].compostos ? data[0].compostos[idx] : null;
-			const nomeCompostoRemovido = compostoRemovido ? (compostoRemovido.nome || compostoRemovido.categoria) : null;
+        async function deleteAdminComposto(idx) {
+            if (!confirm("Tem certeza que deseja excluir esta tabela de composição?")) return;
+            const emp = state.adminLoggedCompany;
+            const data = state.adminGistData;
 
-			if (data[0].compostos) {
-				data[0].compostos.splice(idx, 1);
-			}
+            const compostoRemovido = data[0].compostos ? data[0].compostos[idx] : null;
+            const nomeCompostoRemovido = compostoRemovido ? (compostoRemovido.nome || compostoRemovido.categoria) : null;
 
-			// Remove a referência da composição excluída nos produtos
-			if (nomeCompostoRemovido && data[0].produtos) {
-				data[0].produtos.forEach(p => {
-					if (Array.isArray(p.composto)) {
-						p.composto = p.composto.filter(c => c !== nomeCompostoRemovido);
-						if (p.composto.length === 0) delete p.composto;
-					} else if (p.composto === nomeCompostoRemovido) {
-						delete p.composto;
-					}
-				});
-			}
+            if (data[0].compostos) {
+                data[0].compostos.splice(idx, 1);
+            }
 
-			await updateGistOnGitHub(emp.id, data);
-			
-			// Força o recarregamento dos dados e a re-renderização do painel
-			await renderAdminDashboard();
-		}
+            if (nomeCompostoRemovido && data[0].produtos) {
+                data[0].produtos.forEach(p => {
+                    if (Array.isArray(p.composto)) {
+                        p.composto = p.composto.filter(c => c !== nomeCompostoRemovido);
+                        if (p.composto.length === 0) delete p.composto;
+                    } else if (p.composto === nomeCompostoRemovido) {
+                        delete p.composto;
+                    }
+                });
+            }
 
-		async function saveAdminProduct(e) {
-			e.preventDefault();
-			const emp = state.adminLoggedCompany;
-			const idx = parseInt(document.getElementById('admin-prod-index').value);
-			const data = state.adminGistData;
+            await updateGistOnGitHub(emp.id, data);
+            await renderAdminDashboard();
+        }
 
-			const compCheckboxes = document.querySelectorAll('input[name="adm-prod-comp-check"]:checked');
-			const composicoesSelecionadas = Array.from(compCheckboxes).map(cb => cb.value);
+        async function saveAdminProduct(e) {
+            e.preventDefault();
+            const emp = state.adminLoggedCompany;
+            const idx = parseInt(document.getElementById('admin-prod-index').value);
+            const data = state.adminGistData;
 
-			const newProd = {
-				nome: document.getElementById('adm-prod-nome').value.trim(),
-				preco_custo: parseFloat(document.getElementById('adm-prod-preco').value),
-				descricao: document.getElementById('adm-prod-desc').value.trim(),
-				categoria: document.getElementById('adm-prod-cat').value,
-				composto: composicoesSelecionadas,
-				ativo: document.getElementById('adm-prod-ativo').value
-			};
+            const compCheckboxes = document.querySelectorAll('input[name="adm-prod-comp-check"]:checked');
+            const composicoesSelecionadas = Array.from(compCheckboxes).map(cb => cb.value);
 
-			if (idx >= 0) {
-				data[0].produtos[idx] = { ...data[0].produtos[idx], ...newProd };
-			} else {
-				data[0].produtos.push(newProd);
-			}
+            const newProd = {
+                nome: document.getElementById('adm-prod-nome').value.trim(),
+                preco_custo: parseFloat(document.getElementById('adm-prod-preco').value),
+                descricao: document.getElementById('adm-prod-desc').value.trim(),
+                categoria: document.getElementById('adm-prod-cat').value,
+                composto: composicoesSelecionadas,
+                ativo: document.getElementById('adm-prod-ativo').value
+            };
 
-			closeAdminProductModal();
-			await updateGistOnGitHub(emp.id, data);
-			
-			// Força o recarregamento dos dados e a re-renderização do painel
-			await renderAdminDashboard();
-		}
+            if (idx >= 0) {
+                data[0].produtos[idx] = { ...data[0].produtos[idx], ...newProd };
+            } else {
+                data[0].produtos.push(newProd);
+            }
 
-		async function deleteAdminProduct(idx) {
-			if (!confirm("Tem certeza que deseja excluir este produto?")) return;
-			const emp = state.adminLoggedCompany;
-			const data = state.adminGistData;
+            closeAdminProductModal();
+            await updateGistOnGitHub(emp.id, data);
+            await renderAdminDashboard();
+        }
 
-			data[0].produtos.splice(idx, 1);
-			await updateGistOnGitHub(emp.id, data);
-			
-			// Força o recarregamento dos dados e a re-renderização do painel
-			await renderAdminDashboard();
-		}
-		
+        async function deleteAdminProduct(idx) {
+            if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+            const emp = state.adminLoggedCompany;
+            const data = state.adminGistData;
+
+            data[0].produtos.splice(idx, 1);
+            await updateGistOnGitHub(emp.id, data);
+            await renderAdminDashboard();
+        }
+        
         async function updateGistOnGitHub(empId, updatedJson) {
-			showToast("Salvando alterações...");
-			const gistId = GIST_IDS[empId];
-			if (!gistId) return showToast("Erro: Gist ID não configurado.");
+            showToast("Salvando alterações...");
+            const gistId = GIST_IDS[empId];
+            if (!gistId) return showToast("Erro: Gist ID não configurado.");
 
-			const fileName = empId === "lanches-avenida" ? "produtos_.txt" : "produtosPizzaria_.txt";
+            const fileName = empId === "lanches-avenida" ? "produtos_.txt" : "produtosPizzaria_.txt";
 
-			try {
-				const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-					method: 'PATCH',
-					headers: {
-						'Authorization': `token ${GT}`,
-						'Accept': 'application/vnd.github.v3+json',
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						files: {
-							[fileName]: { content: JSON.stringify(updatedJson, null, 2) }
-						}
-					})
-				});
+            try {
+                const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${GT}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            [fileName]: { content: JSON.stringify(updatedJson, null, 2) }
+                        }
+                    })
+                });
 
-				if (response.ok) {
-					const gistResponseData = await response.json();
-					
-					// Extrai a raw_url atualizada do arquivo retornado pelo Gist
-					if (gistResponseData.files && gistResponseData.files[fileName] && gistResponseData.files[fileName].raw_url) {
-						const newRawUrl = gistResponseData.files[fileName].raw_url;
-						
-						// Atualiza o link na empresa logada no estado
-						if (state.adminLoggedCompany) {
-							state.adminLoggedCompany.link = newRawUrl;
-						}
+                if (response.ok) {
+                    const gistResponseData = await response.json();
+                    
+                    if (gistResponseData.files && gistResponseData.files[fileName] && gistResponseData.files[fileName].raw_url) {
+                        const newRawUrl = gistResponseData.files[fileName].raw_url;
+                        
+                        if (state.adminLoggedCompany) {
+                            state.adminLoggedCompany.link = newRawUrl;
+                        }
 
-						// Atualiza o link na lista global de empresas
-						const empIndex = state.empresas.findIndex(e => e.id === empId);
-						if (empIndex !== -1) {
-							state.empresas[empIndex].link = newRawUrl;
-						}
-					}
+                        const empIndex = state.empresas.findIndex(e => e.id === empId);
+                        if (empIndex !== -1) {
+                            state.empresas[empIndex].link = newRawUrl;
+                        }
+                    }
 
-					showToast("✅ Salvo e atualizado com sucesso!");
-					return true;
-				} else {
-					showToast("⚠️ Não foi possível salvar.");
-					return false;
-				}
-			} catch (err) {
-				console.error(err);
-				showToast("⚠️ Erro de comunicação com o GitHub.");
-				return false;
-			}
-		}
+                    showToast("✅ Salvo e atualizado com sucesso!");
+                    return true;
+                } else {
+                    showToast("⚠️️ Não foi possível salvar.");
+                    return false;
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("⚠️ Erro de comunicação com o GitHub.");
+                return false;
+            }
+        }
 
         function handlePedidosLogin(_0x4b1a){_0x4b1a['\x70\x72\x65\x76\x65\x6e\x74\x44\x65\x66\x61\x75\x6c\x74']();var _0x2c3d=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x70\x65\x64\x2d\x75\x73\x65\x72')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();var _0x5e6f=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x70\x65\x64\x2d\x70\x61\x73\x73')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();if(_0x2c3d===atob('YWRtaW4=')&&_0x5e6f===atob('MjAyNg==')){state['\x70\x65\x64\x69\x64\x6f\x73\x4c\x6f\x67\x67\x65\x64']=true;showToast('\x41\x63\x65\x73\x73\x6f\x20\x63\x6f\x6e\x63\x65\x64\x69\x64\x6f\x21');renderGerenciaPedidosPage();}else{showToast('\x1f\x532\x20\x55\x73\x75\xc3\xa1\x72\x69\x6f\x20\x6f\x75\x20\x73\x65\x6e\x68\x61\x20\x69\x6e\x63\x6f\x72\x72\x65\x74\x6f\x73\x21');}}
         
