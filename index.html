@@ -1080,11 +1080,6 @@
 
                 <div>
 				
-                    <button type="button" class="btn-cancel" onclick="sendOrder2()">so2</button>
-                    <button type="button" class="btn-cancel" onclick="sendOrder3()">so3</button>
-                    <button type="button" class="btn-cancel" onclick="sendOrder4()">so4</button>
-                    <button type="button" class="btn-cancel" onclick="sendOrder5()">so5</button>
-					<div><a href="https://api.whatsapp.com/send?phone=5533999648737&amp;text=ola" target="_blank">so6</a></div> 
                     <button type="submit" class="btn-submit">
                         <i class="fa-brands fa-whatsapp" style="font-size: 1.2rem;"></i> Finalizar Pedido via WhatsApp
                     </button>
@@ -2073,39 +2068,6 @@
                 }
             }, 600);
         }
-		
-		
-        async function sendOrder2() {
-            //gemini
-			const message = 'oi';
-			const whatsappUrl = `https://wa.me/5533999648737?text=${message}`;
-
-            window.open(whatsappUrl, '_blank');
-			
-        }
-		
-        async function sendOrder3() {
-		    //wa.me
-            const whatsappUrl = `https://wa.me/send?phone=${WHATSAPP_TARGET}&amp;&text=${encodedMsg}`;
-
-            window.open(whatsappUrl, '_blank');
-			
-        }		
-		async function sendOrder4() {
-		    //sem amp 
-            const whatsappUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_TARGET}&text=${encodedMsg}`;
-
-            window.open(whatsappUrl, '_blank');
-			
-        }
-		async function sendOrder5() {
-		    //sem api
-            const whatsappUrl = `https://whatsapp.com/send?phone=5533999648737&amp;&text=${encodedMsg}`;
-
-            window.open(whatsappUrl, '_blank');
-			
-        }
-		
 
         async function incrementarNumeroPedidosMes(empresaId) {
             if (!empresaId) return;
