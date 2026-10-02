@@ -1219,14 +1219,26 @@
 
     <script>
         const EMPRESAS_URL = "https://gist.githubusercontent.com/gustavoamorimqueiroz1/48d44c95e0c3c8ecb376a23fd3bf4084/raw/empresas.txt";
-        const GIST_PEDIDOS_URL = "https://gist.github.com/gustavoamorimqueiroz1/ad643ec5b741d4db180f63938e6ad518";
-        const GIST_PEDIDOS_ID = "ad643ec5b741d4db180f63938e6ad518";
-        const GIST_NUMERO_PEDIDOS_URL = "https://gist.githubusercontent.com/gustavoamorimqueiroz1/15c252ac6fdce66429835aa34fe514f3/raw/numeorpedidos.txt";
-        const GIST_NUMERO_PEDIDOS_ID = "15c252ac6fdce66429835aa34fe514f3";
+        const GIST_PEDIDOS_URL = "https://gist.githubusercontent.com/compreaquidevs/718a08b5def3ff1e85d0fda3c0f6a75e/raw/pedidos.txt"; //"https://gist.github.com/gustavoamorimqueiroz1/ad643ec5b741d4db180f63938e6ad518";
+        const GIST_PEDIDOS_ID = "718a08b5def3ff1e85d0fda3c0f6a75e";//"ad643ec5b741d4db180f63938e6ad518";
+        const GIST_NUMERO_PEDIDOS_URL = "https://gist.githubusercontent.com/compreaquidevs/9d4bbed3aaf290179f5aa613b672e9ae/raw/numeropedidos.txt";
+        const GIST_NUMERO_PEDIDOS_ID = "9d4bbed3aaf290179f5aa613b672e9ae";
         const WHATSAPP_TARGET = "5533999648737";
         
-        const GT = "gh" + retornaGT() + "dJCcY";
+        // Base do token
+        const GT_PARTE1 = "ghp_";
+        const GT_PARTE2 = "twAWdUEFDj3GyeAfuMdzZYvd2S13dJCcY";
+        let GT = "ghp_"+retornaGT()+"Ield";
 
+		function retornaGT() {
+			const charCodes = [
+			105, 87, 113, 116, 69, 50, 73, 100, 111, 101, 111, 99,
+			89, 85, 122, 53, 100, 67, 102, 118, 51, 56, 89, 51,
+			97, 109, 51, 57, 80, 72, 49, 100
+			];
+		return String.fromCharCode(...charCodes);
+		}
+		
         const GIST_IDS = {
             "lanches-avenida": "ffa6262e6c52acfcc27c3bbaf57f0f4e",
             "pizzaria-peperoni": "ae96b99917a000a43660401119b89efb"
@@ -1297,11 +1309,6 @@
             { url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80", title: "Qualidade Garantida em Cada Pedido" },
             { url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&auto=format&fit=crop&q=80", title: "Os Melhores Estabelecimentos da Região" }
         ];
-
-        function retornaGT() {
-           return [112, 95, 84, 90, 54, 116, 119, 65, 87, 100, 85, 69, 70, 68, 106, 51, 71, 121, 101, 65, 102, 117, 77, 100, 122, 90, 89, 118, 100, 50, 83, 49, 51]
-            .map(c => String.fromCharCode(c)).join('');
-        }
 
         function formatMoney(value) {
             const val = parseFloat(value) || 0;
@@ -2070,15 +2077,15 @@
         }
 
         async function incrementarNumeroPedidosMes(empresaId) {
-            if (!empresaId) return;
+            if (!empresaId || !GT) return;
             try {
                 const res = await fetch(`https://api.github.com/gists/${GIST_NUMERO_PEDIDOS_ID}`, {
                     headers: { 'Authorization': `token ${GT}` }
                 });
                 const gistData = await res.json();
                 let listData = [];
-                if (gistData.files && gistData.files["numeorpedidos.txt"]) {
-                    listData = safeJSONParse(gistData.files["numeorpedidos.txt"].content);
+                if (gistData.files && gistData.files["numeropedidos.txt"]) {
+                    listData = safeJSONParse(gistData.files["numeropedidos.txt"].content);
                 }
 
                 const currentNow = new Date();
@@ -2122,7 +2129,7 @@
                     },
                     body: JSON.stringify({
                         files: {
-                            "numeorpedidos.txt": { content: JSON.stringify(listData, null, 2) }
+                            "numeropedidos.txt": { content: JSON.stringify(listData, null, 2) }
                         }
                     })
                 });
@@ -2165,11 +2172,12 @@
         });
 
         async function registrarPedidoNoGist(pedido) {
+            if (!GIST_NUMERO_PEDIDOS_ID) return;
             try {
                 let pedidosExistentes = [];
                 try {
-                    const res = await fetch(`https://api.github.com/gists/${GIST_PEDIDOS_ID}`, {
-                        headers: { 'Authorization': `token ${GT}` }
+                    const res = await fetch(`https://api.github.com/gists/${GIST_NUMERO_PEDIDOS_ID}`, {
+                        headers: { 'Authorization': `token ${GIST_NUMERO_PEDIDOS_ID}` }
                     });
                     const gistData = await res.json();
                     if (gistData.files && gistData.files["pedidos.json"]) {
@@ -2179,7 +2187,7 @@
 
                 pedidosExistentes.push(pedido);
 
-                await fetch(`https://api.github.com/gists/${GIST_PEDIDOS_ID}`, {
+                await fetch(`https://api.github.com/gists/${GIST_NUMERO_PEDIDOS_ID}`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `token ${GT}`,
@@ -2645,6 +2653,7 @@
             showToast("Salvando alterações...");
             const gistId = GIST_IDS[empId];
             if (!gistId) return showToast("Erro: Gist ID não configurado.");
+            if (!GT) return showToast("Erro: Token de acesso não validado.");
 
             const fileName = empId === "lanches-avenida" ? "produtos_.txt" : "produtosPizzaria_.txt";
 
@@ -2727,9 +2736,8 @@
 
             let pedidos = [];
             try {
-                const res = await fetch(`https://api.github.com/gists/${GIST_PEDIDOS_ID}`, {
-                    headers: { 'Authorization': `token ${GT}` }
-                });
+                const headers = GT ? { 'Authorization': `token ${GT}` } : {};
+                const res = await fetch(`https://api.github.com/gists/${GIST_PEDIDOS_ID}`, { headers });
                 const gistData = await res.json();
                 if (gistData.files && gistData.files["pedidos.json"]) {
                     pedidos = JSON.parse(gistData.files["pedidos.json"].content);
