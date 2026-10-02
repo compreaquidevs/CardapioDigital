@@ -1219,8 +1219,10 @@
 
     <script>
         const EMPRESAS_URL = "https://gist.githubusercontent.com/gustavoamorimqueiroz1/48d44c95e0c3c8ecb376a23fd3bf4084/raw/empresas.txt";
-        const GIST_PEDIDOS_URL = "https://gist.githubusercontent.com/compreaquidevs/718a08b5def3ff1e85d0fda3c0f6a75e/raw/pedidos.txt"; //"https://gist.github.com/gustavoamorimqueiroz1/ad643ec5b741d4db180f63938e6ad518";
-        const GIST_PEDIDOS_ID = "718a08b5def3ff1e85d0fda3c0f6a75e";//"ad643ec5b741d4db180f63938e6ad518";
+        const GIST_PEDIDOS_URL = 
+		   "https://gist.githubusercontent.com/compreaquidevs/718a08b5def3ff1e85d0fda3c0f6a75e/raw/pedidos.txt"; 
+        const GIST_PEDIDOS_ID = 
+		    "718a08b5def3ff1e85d0fda3c0f6a75e";
         const GIST_NUMERO_PEDIDOS_URL = "https://gist.githubusercontent.com/compreaquidevs/9d4bbed3aaf290179f5aa613b672e9ae/raw/numeropedidos.txt";
         const GIST_NUMERO_PEDIDOS_ID = "9d4bbed3aaf290179f5aa613b672e9ae";
         const WHATSAPP_TARGET = "5533999648737";
@@ -2172,12 +2174,12 @@
         });
 
         async function registrarPedidoNoGist(pedido) {
-            if (!GIST_NUMERO_PEDIDOS_ID) return;
+            if (!GIST_PEDIDOS_ID) return;
             try {
                 let pedidosExistentes = [];
                 try {
-                    const res = await fetch(`https://api.github.com/gists/${GIST_NUMERO_PEDIDOS_ID}`, {
-                        headers: { 'Authorization': `token ${GIST_NUMERO_PEDIDOS_ID}` }
+                    const res = await fetch(`https://api.github.com/gists/${GIST_PEDIDOS_ID}`, {
+                        headers: { 'Authorization': `token ${GT}` }
                     });
                     const gistData = await res.json();
                     if (gistData.files && gistData.files["pedidos.json"]) {
@@ -2187,7 +2189,7 @@
 
                 pedidosExistentes.push(pedido);
 
-                await fetch(`https://api.github.com/gists/${GIST_NUMERO_PEDIDOS_ID}`, {
+                await fetch(`https://api.github.com/gists/${GIST_PEDIDOS_ID}`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `token ${GT}`,
@@ -2322,8 +2324,59 @@
             }
         }
 
-        function handleAdminLogin(_0x2d4f){_0x2d4f['\x70\x72\x65\x76\x65\x6e\x74\x44\x65\x66\x61\x75\x6c\x74']();var _0x1b3a=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x61\x64\x6d\x2d\x75\x73\x65\x72')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();var _0x4e5c=document['\x67\x65\x74\x45\x6c\x65\x6d\x65\x6e\x74\x42\x79\x49\x64']('\x61\x64\x6d\x2d\x70\x61\x73\x73')['\x76\x61\x6c\x75\x65']['\x74\x72\x69\x6d']();var _0x8d9e=state['\x65\x6d\x70\x72\x65\x73\x61\x73']['\x66\x69\x6e\x64'](function(_0x6f7a){var _0x3a2b=''+_0x6f7a['\x69\x64']+_0x6f7a['\x69\x64\x33']+'\x40';return _0x6f7a['\x69\x64']['\x74\x6f\x4c\x6f\x77\x65\x72\x43\x61\x73\x65']()===_0x1b3a['\x74\x6f\x4c\x6f\x77\x65\x72\x43\x61\x73\x65']()&&_0x3a2b===_0x4e5c;});if(_0x8d9e){state['\x61\x64\x6d\x69\x6e\x4c\x6f\x67\x67\x65\x64\x43\x6f\x6d\x70\x61\x6e\x79']=_0x8d9e;showToast('\x42\x65\x6d\x2d\x76\x69\x6e\x64\x6f\x2c\x20'+_0x8d9e['\x6e\x6f\x6d\x65']+'\x21');renderAdminDashboard();}else{showToast('\x1f\x532\x20\x4c\x6f\x67\x69\x6e\x20\x69\x6e\x76\xc3\xa1\x6c\x69\x64\x6f\x21');}}
+        async function handleAdminLogin(event) {
+					event.preventDefault();
+					const empresaIdInput = document.getElementById('adm-user').value.trim();
+					const senhaInput = document.getElementById('adm-pass').value.trim();
 
+					if (!empresaIdInput || senhaInput.length < 3) {
+						showToast("Login inválido!");
+						return;
+					}
+
+					const empresaEncontrada = state.empresas.find(emp => emp.id.toLowerCase() === empresaIdInput.toLowerCase());
+
+					if (!empresaEncontrada) {
+						showToast("Login inválido!");
+						return;
+					}
+
+					const prefixoSenha = senhaInput.substring(0, 3);
+
+					const restoSenha = senhaInput.substring(3);
+
+					const id2Empresa = String(empresaEncontrada.id2 || '').trim();
+					if (restoSenha !== id2Empresa) {
+						showToast("Login inválido!");
+						return;
+					}
+
+					const tokenTest = GT_PARTE1 + prefixoSenha + GT_PARTE2;
+
+					showToast("Autenticando com o servidor...");
+					try {
+						const response = await fetch("https://api.github.com/gists", {
+							method: "GET",
+							headers: {
+								"Authorization": `Bearer ${tokenTest}`,
+								"Accept": "application/vnd.github+json"
+							}
+						});
+
+						if (response.ok) {
+							GT = tokenTest; // Grava a chave na sessão
+							state.adminLoggedCompany = empresaEncontrada;
+							showToast(`Bem-vindo, ${empresaEncontrada.nome}!`);
+							renderAdminDashboard();
+						} else {
+							showToast("Login invalido!");
+						}
+					} catch (err) {
+						console.error("Erro na conexão via token:", err);
+						showToast("Login invalido!");
+					}
+		}
+		
         async function fetchAdminCompanyData() {
             if (state.adminGistData) return state.adminGistData;
 
