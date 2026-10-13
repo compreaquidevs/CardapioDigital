@@ -530,9 +530,27 @@ const GISTS = {
   notificacoes: ''
 };
 const TABLES = Object.keys(GISTS);
-const GH_TOKEN = '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';
-const USUARIOS_BUSCA_ID = '833754c11631da39a6a2f53d6020fe84';
-const USUARIOS_RAW = 'https://gist.githubusercontent.com/gustavoamorimqueiroz1/833754c11631da39a6a2f53d6020fe84/raw';
+/* Segredos incompletos: os 4 primeiros caracteres da senha digitada no login completam
+   o token (1º e último caractere) e o ID do gist de usuários (caracteres 26 e 28).
+   A senha COMPLETA (com esses 4 caracteres) é a que fica gravada em base64 no gist. */
+const PREFIXO_LEN = 4;
+const GH_TOKEN_MIOLO = 'WqtE2IdoeocYUz5dCfv38Y3am39PH1dIel';
+const USUARIOS_ID_PARCIAL = '833754c11631da39a6a2f53d62fe84';
+let GH_TOKEN = '';
+let USUARIOS_BUSCA_ID = '';
+let USUARIOS_RAW = '';
+let LOGIN_PREFIX = '';
+function aplicarSegredos(p) {
+  LOGIN_PREFIX = p;
+  GH_TOKEN = 'ghp_' + p[0] + GH_TOKEN_MIOLO + p[1];
+  USUARIOS_BUSCA_ID = USUARIOS_ID_PARCIAL.slice(0, 25) + p[2] + USUARIOS_ID_PARCIAL[25] + p[3] + USUARIOS_ID_PARCIAL.slice(26);
+  USUARIOS_RAW = 'https://gist.githubusercontent.com/gustavoamorimqueiroz1/' + USUARIOS_BUSCA_ID + '/raw';
+}
+function limparSegredos() { LOGIN_PREFIX = GH_TOKEN = USUARIOS_BUSCA_ID = USUARIOS_RAW = ''; }
+async function tokenValido() {
+  try { return (await fetch('https://api.github.com/gists/' + USUARIOS_BUSCA_ID, { headers: authHeaders(), cache: 'no-store' })).ok; }
+  catch (e) { return false; }
+}
 
 const STATUS = ['rascunho', 'pendente', 'em avaliação inicial', 'em avaliação de negócio',
   'aguardando resposta do idealizador', 'em implantação', 'implantada', 'reprovada'];
@@ -631,7 +649,7 @@ const dirty = new Set();
 let flushTimer;
 
 const gistId = t => GISTS[t] || '';
-const authHeaders = () => ({ Authorization: 'token ' + GH_TOKEN });
+const authHeaders = () => GH_TOKEN ? { Authorization: 'token ' + GH_TOKEN } : {};
 const jsonHeaders = () => ({ ...authHeaders(), 'Content-Type': 'application/json' });
 
 let gistList;
@@ -985,14 +1003,17 @@ async function doLogin() {
   msg.textContent = '';
   
   if (!email || !senha) return msg.textContent = 'Informe e-mail e senha.';
+  if (senha.length < PREFIXO_LEN) return msg.textContent = 'E-mail ou senha incorretos.';
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Verificando...';
 
   try {
+    aplicarSegredos(senha.slice(0, PREFIXO_LEN));
     const remotos = await fetchRemoteUsers();
 
     if (!remotos) {
+      limparSegredos();
       btn.disabled = false;
       btn.textContent = 'Entrar';
       return msg.textContent = 'Não foi possível consultar os usuários. Tente novamente.';
@@ -1000,13 +1021,15 @@ async function doLogin() {
 
     const found = remotos.map(normalizeUser).find(u => u.email.toLowerCase() == email);
     
-    if (!found || !passwordMatches(found, senha)) {
+    if (!found || !passwordMatches(found, senha) || !(await tokenValido())) {
+      limparSegredos();
       btn.disabled = false;
       btn.textContent = 'Entrar';
       return msg.textContent = 'E-mail ou senha incorretos.';
     }
     
     if (!found.ativo) {
+      limparSegredos();
       btn.disabled = false;
       btn.textContent = 'Entrar';
       return msg.textContent = 'Usuário inativo. Fale com o administrador.';
@@ -1024,6 +1047,7 @@ async function doLogin() {
 
     startApp();
   } catch (e) {
+    limparSegredos();
     btn.disabled = false;
     btn.textContent = 'Entrar';
     msg.textContent = 'Erro ao realizar o login. Tente novamente.';
@@ -1420,11 +1444,12 @@ async function changePassword() {
     const u = lista.find(x => normalizeUser(x).email.toLowerCase() == ME.email.toLowerCase());
     if (!u) throw new Error('Usuário não encontrado no gist.');
     if (!passwordMatches(normalizeUser(u), atual)) throw new Error('Senha atual incorreta.');
-    u.senha = b64(nova);
+    const novaCompleta = nova.startsWith(LOGIN_PREFIX) ? nova : LOGIN_PREFIX + nova;
+    u.senha = b64(novaCompleta);
     delete u.senhausuario;
     await patchUsersGist(lista);
     ME.senha = u.senha;
-    if (savedLogin.load()) savedLogin.save(ME.email, nova);
+    if (savedLogin.load()) savedLogin.save(ME.email, novaCompleta);
     showToast('Senha alterada com sucesso!');
     go('perfil');
   } catch (e) {
@@ -1890,7 +1915,8 @@ async function resolveReset(id) {
     if (!lista) throw new Error('Não foi possível consultar os usuários.');
     const u = lista.find(x => normalizeUser(x).email.toLowerCase() == String(n.emailusuario).toLowerCase());
     if (!u) throw new Error('Usuário não encontrado no gist.');
-    u.senha = b64(nova);
+    const novaCompleta = nova.startsWith(LOGIN_PREFIX) ? nova : LOGIN_PREFIX + nova;
+    u.senha = b64(novaCompleta);
     delete u.senhausuario;
     await patchUsersGist(lista);
     const local = DB.usuarios.find(x => x.email.toLowerCase() == String(n.emailusuario).toLowerCase());
@@ -1898,11 +1924,11 @@ async function resolveReset(id) {
     
     let aviso = '';
     try { await closeNotif(id, 'atendida'); } catch (e) { aviso = 'A senha foi alterada, mas não consegui marcar a solicitação como atendida.'; }
-    window._novaSenha = nova;
+    window._novaSenha = novaCompleta;
     openModal(`
       <h3>Senha definida!</h3><br>
       <p>Envie para <b>${esc(getUser(n.emailusuario).nome)}</b> (${esc(n.emailusuario)}):</p>
-      <p style="font-size:1.4rem;color:var(--g);font-weight:800;margin:10px 0;word-break:break-all">${esc(nova)}</p>
+      <p style="font-size:1.4rem;color:var(--g);font-weight:800;margin:10px 0;word-break:break-all">${esc(novaCompleta)}</p>
       ${aviso ? `<p class="msg">${aviso}</p>` : ''}
       <button class="btn" onclick="navigator.clipboard?.writeText(window._novaSenha);showToast('Senha copiada!')">Copiar senha</button>
       <button class="btn o" onclick="closeM();render()">Fechar</button>`);
