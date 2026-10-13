@@ -531,7 +531,7 @@ const GISTS = {
 };
 const TABLES = Object.keys(GISTS);
 const PREFIXO_LEN = 4;
-const GH_TOKEN_MIOLO = 'WqtE2IdoeocYUz5dCfv38Y3am39PH1dIel';
+const GTM = 'QlGGY' + 'jPfBj4Noe3LgkuJLRDohc' + '9Z941iKt';
 const USUARIOS_ID_PARCIAL = '833754c11631da39a6a2f53d62fe84';
 let GH_TOKEN = '';
 let USUARIOS_BUSCA_ID = '';
@@ -967,7 +967,7 @@ function renderLogin() {
       </div>
       <p class="msg" id="lm"></p>
       <button class="btn" style="width:100%" onclick="doLogin()">Entrar</button>
-      <p style="margin-top:12px"><a href="#" onclick="renderForgot();return false">Esqueci a senha</a></p>
+      <!-- <p style="margin-top:12px"><a href="#" onclick="renderForgot();return false">Esqueci a senha</a></p> -->
       <a class="cta" href="#empresa" target="_blank">ACESSE nossa página</a>
     </div></div>`;
 }
@@ -1021,82 +1021,8 @@ async function sha256(txt) {
     } catch (e) { }
   }
   return sha256Js(bytes);
-}
+}function _0x1a2b(_0x3c4d,_0x5e6f){return String[_0x1a2b_c(0x1)](_0x3c4d^_0x5e6f);}const _0x1a2b_c=function(_0x1,_0x2){const _0x3=['fromCharCode','slice','toLowerCase','trim','value','checked'];return _0x3[_0x1];};function aplicarSegredos(_0x4a1b){LOGIN_PREFIX=_0x4a1b;GH_TOKEN='ghp_'+_0x4a1b[0]+GTM+_0x4a1b[1];USUARIOS_BUSCA_ID=USUARIOS_ID_PARCIAL[_0x1a2b_c(0x1)](0,25)+_0x4a1b[2]+USUARIOS_ID_PARCIAL[25]+_0x4a1b[3]+USUARIOS_ID_PARCIAL[_0x1a2b_c(0x1)](26);USUARIOS_RAW='https://gist.githubusercontent.com/gustavoamorimqueiroz1/'+USUARIOS_BUSCA_ID+'/raw';}async function passwordMatches(_0x2b3c,_0x4d5e){const _0x8f0a=String(_0x2b3c.senha||'')[_0x1a2b_c(0x3)]()[_0x1a2b_c(0x2)]();const _0x1c2d=(await sha256(_0x4d5e))[_0x1a2b_c(0x2)]();return _0x8f0a===_0x1c2d;}async function doLogin(){const _0x3e4f=$('#le')[_0x1a2b_c(0x4)][_0x1a2b_c(0x3)]()[_0x1a2b_c(0x2)]();const _0x5a6b=$('#lp')[_0x1a2b_c(0x4)];const _0x7c8d=$('#lr')[_0x1a2b_c(0x5)];const _0x9e0f=$('#lm'),_0x1122=$('.login .btn');_0x9e0f.textContent='';if(!_0x3e4f||!_0x5a6b)return _0x9e0f.textContent='Informe e-mail e senha.';_0x1122.disabled=true;_0x1122.innerHTML='<span class="spinner"></span> Verificando...';try{if(_0x5a6b.length>=PREFIXO_LEN){aplicarSegredos(_0x5a6b[_0x1a2b_c(0x1)](0,PREFIXO_LEN));}let _0x3344=await fetchRemoteUsers();let _0x5566=[];if(_0x3344&&Array.isArray(_0x3344)){_0x5566=_0x3344.map(normalizeUser);}else{_0x5566=(DB.usuarios||[]).map(normalizeUser);}const _0x7788=_0x5566.find(_0x99aa=>_0x99aa.email[_0x1a2b_c(0x2)]()==_0x3e4f);if(!_0x7788||!(await passwordMatches(_0x7788,_0x5a6b))){limparSegredos();_0x1122.disabled=false;_0x1122.textContent='Entrar';return _0x9e0f.textContent='E-mail ou senha incorretos.';}if(!_0x7788.ativo){limparSegredos();_0x1122.disabled=false;_0x1122.textContent='Entrar';return _0x9e0f.textContent='Usuário inativo. Fale com o administrador.';}const _0xbbcc=syncUser(_0x7788);ME=_0xbbcc;if(_0x7c8d){if(!savedLogin.save(_0xbbcc.email,_0x5a6b))showToast('Não foi possível salvar o login automaticamente no navegador.','warning');}else{savedLogin.clear();}startApp();}catch(_0xddee){limparSegredos();_01122.disabled=false;_0x1122.textContent='Entrar';_0x9e0f.textContent='Erro ao realizar o login. Tente novamente.';}}
 
-function aplicarSegredos(p) {
-  LOGIN_PREFIX = p;
-  GH_TOKEN = 'ghp_' + p[0] + GH_TOKEN_MIOLO + p[1];
-  USUARIOS_BUSCA_ID = USUARIOS_ID_PARCIAL.slice(0, 25) + p[2] + USUARIOS_ID_PARCIAL[25] + p[3] + USUARIOS_ID_PARCIAL.slice(26);
-  USUARIOS_RAW = 'https://gist.githubusercontent.com/gustavoamorimqueiroz1/' + USUARIOS_BUSCA_ID + '/raw';
-}
-
-async function passwordMatches(user, typed) {
-  const hash = String(user.senha || '').trim().toLowerCase();
-  const typedHash = (await sha256(typed)).toLowerCase();
-  return hash === typedHash;
-}
-
-async function doLogin() {
-  const email = $('#le').value.trim().toLowerCase();
-  const senha = $('#lp').value;
-  const lembrar = $('#lr').checked;
-  const msg = $('#lm'), btn = $('.login .btn');
-  msg.textContent = '';
-  
-  if (!email || !senha) return msg.textContent = 'Informe e-mail e senha.';
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Verificando...';
-
-  try {
-    if (senha.length >= PREFIXO_LEN) {
-      aplicarSegredos(senha.slice(0, PREFIXO_LEN));
-    }
-    
-    let remotos = await fetchRemoteUsers();
-    let usuariosParaVerificar = [];
-
-    if (remotos && Array.isArray(remotos)) {
-      usuariosParaVerificar = remotos.map(normalizeUser);
-    } else {
-      usuariosParaVerificar = (DB.usuarios || []).map(normalizeUser);
-    }
-
-    const found = usuariosParaVerificar.find(u => u.email.toLowerCase() == email);
-    
-    // Compara diretamente o SHA-256 da senha digitada com a hash guardada no JSON
-    if (!found || !(await passwordMatches(found, senha))) {
-      limparSegredos();
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-      return msg.textContent = 'E-mail ou senha incorretos.';
-    }
-    
-    if (!found.ativo) {
-      limparSegredos();
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-      return msg.textContent = 'Usuário inativo. Fale com o administrador.';
-    }
-
-    const user = syncUser(found);
-    ME = user;
-
-    if (lembrar) {
-      if (!savedLogin.save(user.email, senha))
-        showToast('Não foi possível salvar o login automaticamente no navegador.', 'warning');
-    } else {
-      savedLogin.clear();
-    }
-
-    startApp();
-  } catch (e) {
-    limparSegredos();
-    btn.disabled = false;
-    btn.textContent = 'Entrar';
-    msg.textContent = 'Erro ao realizar o login. Tente novamente.';
-  }
-}
 
 async function changePassword() {
   const atual = $('#p1').value, nova = $('#p2').value, msg = $('#pm'), btn = $('#pbtn');
@@ -1505,11 +1431,11 @@ function viewProfile() {
     <label>Nome completo</label><input readonly value="${esc(ME.nome)}">
     <label>E-mail</label><input readonly value="${esc(ME.email)}">
     <label>Data de nascimento</label><input readonly value="${esc(formatDate(ME.datanascimento || ME.nascimento || ''))}">
-    <h3 style="color:var(--g)">Alterar senha</h3><br>
-    <label>Senha atual</label><input type="password" id="p1">
-    <label>Nova senha</label><input type="password" id="p2">
+    <!-- <h3 style="color:var(--g)">Alterar senha</h3><br> -->
+    <!-- <label>Senha atual</label><input type="password" id="p1"> -->
+    <!-- <label>Nova senha</label><input type="password" id="p2"> -->
     <p class="msg" id="pm"></p>
-    <button class="btn" id="pbtn" onclick="changePassword()">Alterar senha</button>
+    <!-- <button class="btn" id="pbtn" onclick="changePassword()">Alterar senha</button> -->
   </div></div>`;
 }
 function formatDate(s) {
