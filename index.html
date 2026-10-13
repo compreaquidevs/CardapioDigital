@@ -76,7 +76,7 @@ input:focus,select:focus,textarea:focus {
   border-color:var(--g);
   box-shadow:0 0 0 2px #39ff1433
 }
-input[readonly] {
+input[readonly],textarea[readonly] {
   opacity:.6
 }
 input[type=checkbox] {
@@ -524,6 +524,10 @@ header.hc .menu {
 .steps .st { display:flex; gap:12px; align-items:flex-start }
 .steps .st p { margin:0 }
 .doc ul { margin:8px 0 8px 22px }
+.pbar { height:10px; border-radius:10px; background:#3a3f46; overflow:hidden; margin:8px 0 }
+.pbar div { height:100%; background:var(--g); border-radius:10px; transition:.3s }
+.kcm { max-height:150px; overflow:auto; margin-top:8px }
+.kc input { user-select:text; -webkit-user-select:text }
 
 @media (max-width:820px) {
   .wrap { grid-template-columns:1fr }
@@ -570,7 +574,9 @@ const GISTS = {
   ideias:      '2b947e0b42aaacb61cddc29be00e17d0',
   empresas:    'e049dd6337764d33ae7770678e01a801',
   programas:   '2b36bffaed668f45ee2ca85765430cd3',
-  notificacoes: 'fbd1dd1e8f9e8fa7821e3d7918f3ffb2'
+  notificacoes: 'fbd1dd1e8f9e8fa7821e3d7918f3ffb2',
+  metas:        'ecf6297f014e1691492edc4673859235',
+  comentarioscard: '8e8c4a719266fdc5693c2e1aab916921'
 };
 const TABLES = Object.keys(GISTS);
 const PREFIXO_LEN = 4;
@@ -630,7 +636,6 @@ function parseLooseJson(text) {
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pad = n => String(n).padStart(2, '0');
-
 
 function showToast(msg, type = 'info') {
   let container = document.getElementById('toast-container');
@@ -706,7 +711,7 @@ function seedData() {
   return {
     perfis: [{ tipo: 'usuario_comum' }, { tipo: 'admin' }, { tipo: 'aprovador' }],
     empresas: [],
-    usuarios: [], ideias: [], programas: [], comentarios: [], curtidas: [], cards: [], notificacoes: []
+    usuarios: [], ideias: [], programas: [], comentarios: [], curtidas: [], cards: [], notificacoes: [], metas: [], comentarioscard: []
   };
 }
 
@@ -776,7 +781,27 @@ function normalizeCard(c, k) {
            status: LANES.includes(c.status) ? c.status : LANES[0] };
 }
 
+function metaPct(subs) {
+  return subs.length ? Math.round(subs.filter(x => x.concluida).length * 100 / subs.length) : 0;
+}
+function normalizeMeta(m) {
+  m = m && typeof m == 'object' ? m : {};
+  const submeta = (Array.isArray(m.submeta) ? m.submeta : []).map(x => ({
+    ...(x && typeof x == 'object' ? x : {}),
+    descricao: String((x && x.descricao) || ''),
+    concluida: toBool(x && x.concluida)
+  }));
+  const usuarios = (Array.isArray(m.usuarios) ? m.usuarios : [])
+    .map(u => ({ email: String((u && u.email) || (typeof u == 'string' ? u : '')).trim() }))
+    .filter(u => u.email);
+  return { ...m, meta: String(m.meta || ''), autor: String(m.autor || '').trim(),
+           dataCriacao: m.dataCriacao || '', dataPrevisaoConclusao: m.dataPrevisaoConclusao || '',
+           submeta, usuarios, porcentagemConclusao: metaPct(submeta) };
+}
+
 const SYNC = {
+  metas:       { key: m => [m.meta, m.dataCriacao, m.autor].join('|'), norm: l => l.map(normalizeMeta) },
+  comentarioscard: { key: c => [c.idcardaplicacao, c.autorcomentario, c.data, c.comentario].join('|'), norm: l => l },
   ideias:      { key: i => String(i.id), norm: l => l.map(normalizeIdea) },
   curtidas:    { key: c => c.idideia + '|' + c.autorcurtida, norm: l => l },
   comentarios: { key: c => [c.idideia, c.autorcomentario, c.data, c.comentario].join('|'), norm: l => l },
@@ -795,6 +820,7 @@ function normalizeData() {
   }));
   DB.ideias = SYNC.ideias.norm(DB.ideias);
   DB.cards = SYNC.cards.norm(DB.cards);
+  DB.metas = SYNC.metas.norm(DB.metas);
 }
 
 async function loadAll() {
@@ -1255,7 +1281,7 @@ let VIEW = 'home';
 let notifTimer;
 let visible = PAGE_SIZE;
 const VIEWS = { home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
-                usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, senhas: viewPasswordRequests, notificacoes: viewNotifications };
+                usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals };
 
 function startApp() {
   document.body.innerHTML = `
@@ -1268,6 +1294,7 @@ function startApp() {
           <a onclick="go('perfil')">Meu perfil</a>
           <a onclick="go('minhas')">Minhas ideias</a>
           <a onclick="go('notificacoes')" id="mnuNotifs">Notificações</a>
+          <a onclick="go('metas')">Metas</a>
           ${isApprover() ? `<a onclick="go('todas')">Todas as ideias</a><a onclick="go('programas')">Programa de ideias</a>` : ''}
           ${isAdmin() ? `<a onclick="go('usuarios')">Gestão de usuários</a>` : ''}
           <a onclick="go('kanban')">Aplicação</a>
@@ -1284,7 +1311,7 @@ function startApp() {
   notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); }, 60000);
 }
 
-const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban'];
+const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban', 'metas'];
 const typing = () => /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
 
 async function syncFeed() {
@@ -1513,7 +1540,8 @@ function openIdeaForm(id) {
     <label>Título</label><input id="f1" value="${esc(i.titulo)}">
     <label>Descrição</label><textarea id="f2" rows="4">${esc(i.descricao)}</textarea>
     <label>Campanha</label>
-    <select id="f3">${companyPrograms().map(p => `<option ${p.programaideia == i.programaideia ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}</select>
+    <select id="f3" onchange="showCriterio()"><option value="">Selecione...</option>${companyPrograms().map(p => `<option ${p.programaideia == i.programaideia ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}</select>
+    <div id="f3w" style="display:none"><label>Critério da campanha</label><textarea id="f3c" rows="2" readonly></textarea></div>
     <label>Benefício</label><input id="f4" value="${esc(i.beneficio)}">
     <label>Usuário aprovador (obrigatório)</label>
     <select id="f5"><option value="">Selecione...</option>
@@ -1523,6 +1551,16 @@ function openIdeaForm(id) {
     <button class="btn" onclick="saveIdea(${id || 0},'pendente')">Enviar</button>
     <button class="btn o" onclick="saveIdea(${id || 0},'rascunho')">Salvar rascunho</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
+  showCriterio();
+}
+
+function showCriterio() {
+  const w = $('#f3w');
+  if (!w) return;
+  const p = companyPrograms().find(x => x.programaideia == $('#f3').value);
+  const txt = p && p.criterio ? p.criterio : '';
+  w.style.display = txt ? '' : 'none';
+  $('#f3c').value = txt;
 }
 
 async function saveIdea(id, status) {
@@ -1683,7 +1721,8 @@ function viewPrograms() {
     ${companyPrograms().map(p => `
       <div class="box idea">
         <h3>${esc(p.programaideia)}</h3>
-        <p>${esc(p.descricao)}</p><br>
+        <p>${esc(p.descricao)}</p>
+        ${p.criterio ? `<p class="meta">Critério: ${esc(p.criterio)}</p>` : ''}<br>
         <button class="btn s o" onclick="openProgramForm('${esc(p.programaideia)}')">Editar</button>
         <button class="btn s r" onclick="deleteProgram('${esc(p.programaideia)}')">Excluir</button>
       </div>`).join('') || '<div class="box">Nenhuma campanha cadastrada.</div>'}
@@ -1698,6 +1737,8 @@ function openProgramForm(nome = '') {
     <input id="g1" value="${esc(p.programaideia || '')}" placeholder="Digite o título da campanha">
     <label>Descrição</label>
     <textarea id="g2" rows="4" placeholder="Digite a descrição">${esc(p.descricao || '')}</textarea>
+    <label>Critério</label>
+    <textarea id="g3" rows="2" placeholder="Digite o critério da campanha">${esc(p.criterio || '')}</textarea>
     <p class="msg" id="gm"></p>
     <button class="btn" onclick="saveProgram('${esc(nome)}')">Salvar</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
@@ -1706,6 +1747,7 @@ function openProgramForm(nome = '') {
 function saveProgram(antigo) {
   const titulo = $('#g1').value.trim();
   const descricao = $('#g2').value.trim();
+  const criterio = $('#g3').value.trim();
   if (!titulo) return $('#gm').textContent = 'O título é obrigatório.';
 
   const p = companyPrograms().find(x => x.programaideia == antigo);
@@ -1714,13 +1756,14 @@ function saveProgram(antigo) {
       companyIdeas().filter(i => i.programaideia == antigo).forEach(i => i.programaideia = titulo);
       save('ideias');
     }
-    Object.assign(p, { programaideia: titulo, descricao });
+    Object.assign(p, { programaideia: titulo, descricao, criterio });
     save('programas');
   } else {
     DB.programas.push({
       programaideia: titulo,
       empresa: ME.empresa,
       descricao,
+      criterio,
       emailautor: ME.email
     });
     save('programas');
@@ -1783,6 +1826,7 @@ function viewKanban() {
                 <br>Avaliador: ${esc(getUser(c.emailavaliador).nome)}<br>Prioridade: ${PRIORIDADE[c.prioridade]}</p>
               <button class="btn s o" onclick="openCardForm(${c.id})">Editar</button>
               <button class="btn s r" onclick="deleteCard(${c.id})">Excluir</button>
+              ${cardComments(c)}
             </div>`).join('')}
         </div>`).join('')}
     </div>
@@ -1906,8 +1950,141 @@ function saveCard(id) {
 function deleteCard(id) {
   showConfirm('Deseja realmente excluir este card?', () => {
     DB.cards = DB.cards.filter(c => c.id != id);
-    save('cards'); render();
+    DB.comentarioscard = DB.comentarioscard.filter(x => x.idcardaplicacao != id);
+    save('cards', 'comentarioscard'); render();
     showToast('Card excluído!');
+  });
+}
+
+/* ======================= COMENTÁRIOS DOS CARDS ========================== */
+function cardComments(c) {
+  const list = DB.comentarioscard.filter(x => x.idcardaplicacao == c.id)
+    .sort((a, b) => (parseDate(a.data) - parseDate(b.data)) || 0);
+  return `
+    <div class="kcm">
+      ${list.map(x => `<div class="cm"><b>${esc(getUser(x.autorcomentario).nome)}</b> <small>${esc(x.data)}</small><br>${esc(x.comentario)}</div>`).join('')}
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="kc${c.id}" placeholder="Comentar..." onkeydown="if(event.key=='Enter')addCardComment(${c.id})">
+      <button class="btn s" onclick="addCardComment(${c.id})">Enviar</button>
+    </div>`;
+}
+
+function addCardComment(id) {
+  const el = $('#kc' + id);
+  const texto = el ? el.value.trim() : '';
+  if (!texto) return;
+  DB.comentarioscard.push({ idcardaplicacao: id, autorcomentario: ME.email, comentario: texto, data: now() });
+  save('comentarioscard'); render();
+}
+
+/* ================================ METAS ================================= */
+let SHOW_DONE_GOALS = false;
+const sameEmail = (a, b) => String(a || '').trim().toLowerCase() == String(b || '').trim().toLowerCase();
+const canSeeGoal = m => sameEmail(m.autor, ME.email) || m.usuarios.some(u => sameEmail(u.email, ME.email));
+
+function viewGoals() {
+  const lista = DB.metas.map((m, k) => ({ m, k }))
+    .filter(x => canSeeGoal(x.m) && (SHOW_DONE_GOALS || x.m.porcentagemConclusao < 100))
+    .sort((a, b) => (parseDate(b.m.dataCriacao) - parseDate(a.m.dataCriacao)) || 0);
+  return `
+  <div class="wrap one"><div>
+    <h2>Metas</h2><br>
+    ${isApprover() ? `<button class="btn" onclick="openGoalForm()">＋ Nova meta</button><br><br>` : ''}
+    <label><input type="checkbox" ${SHOW_DONE_GOALS ? 'checked' : ''} onchange="SHOW_DONE_GOALS=this.checked;render()">Mostrar metas concluídas</label><br><br>
+    ${lista.map(x => goalCard(x.m, x.k)).join('') || '<div class="box">Nenhuma meta ativa.</div>'}
+  </div></div>`;
+}
+
+function goalCard(m, k) {
+  const pct = m.porcentagemConclusao;
+  return `
+  <div class="box idea">
+    <h3>${esc(m.meta)} <span class="badge ${pct >= 100 ? 's-implantada' : 's-implantacao'}">${pct}%</span></h3>
+    <div class="pbar"><div style="width:${pct}%"></div></div>
+    <div class="meta">Criada por ${esc(getUser(m.autor).nome)} em ${esc(m.dataCriacao)} · Previsão de conclusão: ${esc(m.dataPrevisaoConclusao)}</div>
+    <div class="meta">Usuários: ${m.usuarios.map(u => esc(getUser(u.email).nome)).join(', ') || '-'}</div>
+    ${m.submeta.map((x, j) => `
+      <label style="display:flex;align-items:center;gap:6px;color:var(--fg);font-size:.95rem;padding:3px 0;cursor:pointer">
+        <input type="checkbox" style="margin:0" ${x.concluida ? 'checked' : ''} onchange="toggleSubgoal(${k},${j},this.checked)">
+        <span style="${x.concluida ? 'text-decoration:line-through;opacity:.6' : ''}">${esc(x.descricao)}</span>
+      </label>`).join('')}
+    ${isApprover() ? `<br><button class="btn s r" onclick="deleteGoal(${k})">Excluir</button>` : ''}
+  </div>`;
+}
+
+function toggleSubgoal(k, j, val) {
+  const m = DB.metas[k];
+  if (!m || !m.submeta[j] || !canSeeGoal(m)) return;
+  m.submeta[j].concluida = !!val;
+  m.porcentagemConclusao = metaPct(m.submeta);
+  save('metas'); render();
+  if (m.porcentagemConclusao == 100) showToast('Meta concluída!');
+}
+
+function openGoalForm() {
+  if (!isApprover()) return;
+  openModal(`
+    <h3>Nova meta</h3><br>
+    <label>Meta</label><input id="m1">
+    <label>Previsão de conclusão</label><input id="m2" type="date">
+    <label>Submetas (cadastre ao menos uma)</label>
+    <div id="msubs"></div>
+    <button class="btn s o" onclick="addSubgoalField()">＋ Adicionar submeta</button><br><br>
+    <label>Usuários com acesso</label>
+    <div id="musers" style="max-height:160px;overflow:auto;margin-bottom:10px">
+      ${companyUsers().filter(u => u.ativo).map(u => `
+        <label style="display:flex;align-items:center;color:var(--fg)">
+          <input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${sameEmail(u.email, ME.email) ? 'checked disabled' : ''}>${esc(u.nome)}
+        </label>`).join('')}
+    </div>
+    <p class="msg" id="mm"></p>
+    <button class="btn" onclick="saveGoal()">Salvar</button>
+    <button class="btn r" onclick="closeM()">Cancelar</button>`);
+  addSubgoalField(false);
+}
+
+function addSubgoalField(focus = true) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.style.marginBottom = '8px';
+  row.innerHTML = '<input class="sg" placeholder="Descrição da submeta"><button class="btn s r" type="button" onclick="this.parentNode.remove()">✕</button>';
+  $('#msubs').appendChild(row);
+  if (focus) row.querySelector('input').focus();
+}
+
+function saveGoal() {
+  const meta = $('#m1').value.trim(), prev = $('#m2').value;
+  const subs = [...document.querySelectorAll('#msubs .sg')].map(x => x.value.trim()).filter(Boolean);
+  const users = [...document.querySelectorAll('#musers input:checked')].map(x => x.value);
+  const erro = t => { $('#mm').textContent = t; };
+  if (!meta) return erro('Informe a meta.');
+  if (!prev) return erro('Informe a previsão de conclusão.');
+  if (!subs.length) return erro('Cadastre ao menos uma submeta.');
+  const [y, mo, d] = prev.split('-');
+  DB.metas.push({
+    meta,
+    dataPrevisaoConclusao: `${d}-${mo}-${y} 23:59`,
+    dataCriacao: now(),
+    porcentagemConclusao: 0,
+    autor: ME.email,
+    submeta: subs.map(descricao => ({ descricao, concluida: false })),
+    usuarios: users.map(email => ({ email }))
+  });
+  save('metas'); closeM(); render();
+  showToast('Meta cadastrada!');
+}
+
+function deleteGoal(k) {
+  const m = DB.metas[k];
+  if (!m || !isApprover()) return;
+  const key = SYNC.metas.key(m);
+  showConfirm(`Deseja realmente excluir a meta "${m.meta}"?`, () => {
+    const at = DB.metas.findIndex(x => SYNC.metas.key(x) == key);
+    if (at < 0) return;
+    DB.metas.splice(at, 1);
+    save('metas'); render();
+    showToast('Meta excluída!');
   });
 }
 
