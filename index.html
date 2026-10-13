@@ -482,6 +482,49 @@ header.hc .menu {
   color: #ff9e9e;
 }
 
+.filtros {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:0 12px;
+  align-items:end
+}
+.filtros .btn { margin-bottom:10px }
+.indic {
+  display:flex;
+  align-items:center;
+  gap:24px;
+  flex-wrap:wrap
+}
+.indic h3 { color:var(--g); margin-bottom:4px }
+.donut { position:relative; width:140px; height:140px; flex:none }
+.donut svg { width:100%; height:100%; transform:rotate(-90deg) }
+.donut .ct {
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  line-height:1.15
+}
+.donut .ct b { font-size:1.5rem }
+.donut .ct small { color:var(--mut); font-size:.72rem }
+.leg { display:flex; flex-direction:column; gap:8px }
+.leg span { display:flex; align-items:center; gap:8px }
+.leg i { width:12px; height:12px; border-radius:50%; display:inline-block }
+.feats {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+  margin:12px 0
+}
+.feats .box { margin:0 }
+.feats h3 { color:var(--g); font-size:1rem; margin-bottom:6px }
+.steps { display:flex; flex-direction:column; gap:10px; margin:12px 0 }
+.steps .st { display:flex; gap:12px; align-items:flex-start }
+.steps .st p { margin:0 }
+.doc ul { margin:8px 0 8px 22px }
+
 @media (max-width:820px) {
   .wrap { grid-template-columns:1fr }
   .car { height:170px }
@@ -588,9 +631,14 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pad = n => String(n).padStart(2, '0');
 
+
 function showToast(msg, type = 'info') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
   const t = document.createElement('div');
   t.className = `toast ${type}`;
   const icon = type === 'warning' ? '⚠️' : type === 'error' ? '❌' : 'ℹ️';
@@ -903,16 +951,58 @@ function renderDocPage(titulo, html) {
 
 function renderCompanyPage() {
   document.body.innerHTML = `
-    <header>${logoImg()}<b style="color:var(--g)">INSIGHT</b></header>
+    <header>${logoImg()}</header>
     <div class="doc">
-      <div style="text-align:center">${logoImg('style="height:90px"')}</div>
+      <div style="text-align:center">${logoImg('style="height:90px;border-radius:12px"')}</div>
       <h1>INSIGHT: cada ideia importa</h1>
       <p>A <b>compreaquidevs</b> desenvolve o <b>INSIGHT</b>, software de programa de ideias onde cada ideia de colaborador importa. Colaboradores propõem, curtem e comentam; aprovadores avaliam e acompanham até a implantação.</p>
+
+      <div class="car" style="margin-top:18px">
+        ${CAROUSEL_IMGS.map((src, k) => `<img src="${src}" class="${k ? '' : 'on'}">`).join('')}
+        <button style="left:10px" onclick="moveCarousel(-1)"><span>‹</span></button>
+        <button style="right:10px" onclick="moveCarousel(1)"><span>›</span></button>
+        <div class="dots">${CAROUSEL_IMGS.map((_, k) => `<i onclick="moveCarousel(0,${k})"></i>`).join('')}</div>
+      </div>
+      <p class="quote" id="qt">${QUOTES[0]}</p>
+
       <h2>Como ideias movem o mundo</h2>
       <p>A roda, a imprensa, a eletricidade e a internet nasceram de alguém que questionou o óbvio. Grandes transformações raramente surgem de grandes planos: surgem de pequenas ideias bem ouvidas. Empresas que criam espaço para propostas de todos os níveis aprendem mais rápido, resolvem problemas reais e engajam suas equipes.</p>
+      <p>Muitas vezes, quem está na linha de frente é quem enxerga primeiro o desperdício, o gargalo ou a oportunidade. O INSIGHT dá a essas pessoas um canal simples e organizado para transformar uma observação do dia a dia em uma proposta concreta.</p>
+
       <h2>O produto</h2>
       <p>Feed de ideias, pontuação, campanhas, fluxo de avaliação com parecer, board kanban e gestão de usuários, tudo por empresa.</p>
+      <div class="feats">
+        <div class="box"><h3>💡 Feed de ideias</h3><p class="meta">Todos acompanham as ideias da empresa, curtem e comentam para fortalecer as melhores propostas.</p></div>
+        <div class="box"><h3>🏆 Pontuação</h3><p class="meta">Quem propõe, curte e comenta ganha pontos e aparece no ranking geral, estimulando a participação.</p></div>
+        <div class="box"><h3>🎯 Campanhas</h3><p class="meta">Programas de ideias com um tema definido ajudam a direcionar a criatividade para os desafios do momento.</p></div>
+        <div class="box"><h3>✅ Avaliação com parecer</h3><p class="meta">Aprovadores analisam cada ideia, atualizam o status e deixam um parecer para o idealizador.</p></div>
+        <div class="box"><h3>📋 Board kanban</h3><p class="meta">Organize as ações de implantação em colunas e acompanhe o andamento de cada tarefa.</p></div>
+        <div class="box"><h3>👥 Gestão de usuários</h3><p class="meta">Perfis de colaborador, aprovador e administrador, com acesso separado por empresa.</p></div>
+      </div>
+
+      <h2>Como funciona</h2>
+      <div class="steps">
+        <div class="st"><div class="av">1</div><p><b>Proponha.</b> O colaborador cadastra a ideia, escolhe a campanha, descreve o benefício esperado e indica um aprovador. Também é possível salvar como rascunho ou marcar a ideia como privada.</p></div>
+        <div class="st"><div class="av">2</div><p><b>Engaje.</b> Os colegas curtem e comentam, contribuindo para o amadurecimento da proposta.</p></div>
+        <div class="st"><div class="av">3</div><p><b>Avalie.</b> O aprovador analisa a ideia, passa por avaliação inicial e de negócio e, se necessário, pede ajustes ao idealizador.</p></div>
+        <div class="st"><div class="av">4</div><p><b>Implante.</b> Ideias aprovadas entram em implantação e, ao final, são marcadas como implantadas, com o resultado visível para todos.</p></div>
+      </div>
+
+      <h2>Por que usar o INSIGHT</h2>
+      <ul>
+        <li>Cultura de inovação: todos os colaboradores têm voz, independentemente do cargo.</li>
+        <li>Transparência: o status de cada ideia e o parecer do aprovador ficam registrados.</li>
+        <li>Engajamento: pontuação e reconhecimento incentivam a participação contínua.</li>
+        <li>Foco: campanhas direcionam as ideias para os temas que mais importam à empresa.</li>
+        <li>Acompanhamento: indicadores mostram quantas ideias foram implantadas e quantas foram reprovadas.</li>
+      </ul>
+
+      <h2>Sobre a compreaquidevs</h2>
+      <p>A <b>compreaquidevs</b> é uma empresa de desenvolvimento de software dedicada a criar ferramentas que aproximam pessoas e resultados. O INSIGHT nasceu da convicção de que boas ideias existem em todos os lugares da organização e só precisam de um espaço para serem ouvidas.</p>
+
+      <a class="cta" href="#" onclick="location.hash='';location.reload();return false">Acessar o INSIGHT</a>
     </div>`;
+  startCarousel();
 }
 
 /* ========================== 5. AUTENTICAÇÃO ============================= */
@@ -959,7 +1049,6 @@ function renderLogin() {
     <div class="login"><div class="box">
       ${logoImg()}
       <h2>Bem-vindo ao INSIGHT</h2><p class="meta">Cada ideia importa</p>
-      ${gistOnline ? '' : '<p class="msg">Não foi possível acessar os gists. Tente novamente em instantes.</p>'}
       <div style="text-align:left">
         <label>E-mail</label><input id="le" type="email" value="${esc(saved.email)}">
         <label>Senha</label><input id="lp" type="password" value="${esc(saved.senha)}" onkeydown="if(event.key=='Enter')doLogin()">
@@ -1033,9 +1122,9 @@ async function changePassword() {
   btn.disabled = true; btn.textContent = 'Salvando...';
   try {
     const lista = await fetchRemoteUsers();
-    if (!lista) throw new Error('Não foi possível consultar o gist.');
+    if (!lista) throw new Error('Não foi possível consultar os usuários. Tente novamente.');
     const u = lista.find(x => normalizeUser(x).email.toLowerCase() == ME.email.toLowerCase());
-    if (!u) throw new Error('Usuário não encontrado no gist.');
+    if (!u) throw new Error('Usuário não encontrado.');
     if (!(await passwordMatches(normalizeUser(u), atual))) throw new Error('Senha atual incorreta.');
     
     // Guarda o hash SHA-256 direto da nova senha
@@ -1065,7 +1154,7 @@ async function resolveReset(id) {
     const lista = await fetchRemoteUsers() || DB.usuarios;
     if (!lista) throw new Error('Não foi possível consultar os usuários.');
     const u = lista.find(x => normalizeUser(x).email.toLowerCase() == String(n.emailusuario).toLowerCase());
-    if (!u) throw new Error('Usuário não encontrado no gist.');
+    if (!u) throw new Error('Usuário não encontrado.');
     
     // Guarda o hash SHA-256 direto da nova senha
     u.senha = await sha256(nova);
@@ -1280,8 +1369,7 @@ function scoreRanking() {
 
 const loadBanner = () => {
   const falhas = ['ideias', 'curtidas', 'comentarios'].filter(t => LOAD_ERR[t]);
-  return falhas.length ? `<div class="box" style="border-color:#e55"><b>⚠ Não foi possível carregar do gist:</b>
-    ${falhas.map(t => esc(t + ' — ' + LOAD_ERR[t])).join('; ')}.<br><br>
+  return falhas.length ? `<div class="box" style="border-color:#e55"><b>⚠ Não foi possível carregar os dados no momento.</b><br><br>
     <button class="btn s" onclick="refreshData().then(render)">Tentar novamente</button></div>` : '';
 };
 
@@ -1325,19 +1413,94 @@ function viewMyIdeas() {
   return `<div class="wrap one"><div><h2>Minhas ideias</h2><br>${loadBanner()}
     ${list.map(i => ideaCard(i, true)).join('') || '<div class="box">Você ainda não criou ideias.</div>'}</div></div>`;
 }
-function viewAllIdeas() {
-  const list = companyIdeas().filter(i => {
-    if (i.status === 'rascunho') {
-      return i.emailusuario === ME.email;
+const FILTRO_TODAS = { de: '', ate: '', campanha: '', status: '' };
+
+function ideiasBaseTodas() {
+  return companyIdeas().filter(i => i.status !== 'rascunho' || i.emailusuario === ME.email);
+}
+function filtraTodas(ignoraStatus) {
+  const f = FILTRO_TODAS;
+  const de = f.de ? new Date(f.de + 'T00:00:00') : null;
+  const ate = f.ate ? new Date(f.ate + 'T23:59:59') : null;
+  return ideiasBaseTodas().filter(i => {
+    if (de || ate) {
+      const d = parseDate(i.data);
+      if (isNaN(d) || (de && d < de) || (ate && d > ate)) return false;
     }
+    if (f.campanha && i.programaideia != f.campanha) return false;
+    if (!ignoraStatus && f.status && i.status != f.status) return false;
     return true;
   });
+}
 
+function indicadorHtml() {
+  const base = filtraTodas(true);
+  const impl = base.filter(i => i.status == 'implantada').length;
+  const repr = base.filter(i => i.status == 'reprovada').length;
+  const total = impl + repr;
+  const R = 54, C = 2 * Math.PI * R;
+  const aImpl = total ? C * impl / total : 0;
+  const aRepr = total ? C * repr / total : 0;
+  const pct = total ? Math.round(impl * 100 / total) : 0;
+  return `
+    <div class="indic">
+      <div class="donut">
+        <svg viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="${R}" fill="none" stroke="#3a3f46" stroke-width="18"></circle>
+          ${total ? `<circle cx="70" cy="70" r="${R}" fill="none" stroke="#2f80ff" stroke-width="18" stroke-dasharray="${aImpl} ${C - aImpl}"></circle>
+          <circle cx="70" cy="70" r="${R}" fill="none" stroke="#e53935" stroke-width="18" stroke-dasharray="${aRepr} ${C - aRepr}" stroke-dashoffset="${-aImpl}"></circle>` : ''}
+        </svg>
+        <div class="ct"><b>${total ? pct + '%' : '-'}</b><small>implantadas</small></div>
+      </div>
+      <div>
+        <h3>Indicador: implantadas x reprovadas</h3>
+        <div class="leg">
+          <span><i style="background:#2f80ff"></i>Implantadas: <b>${impl}</b></span>
+          <span><i style="background:#e53935"></i>Reprovadas: <b>${repr}</b></span>
+        </div>
+        ${total ? '' : '<p class="meta">Nenhuma ideia implantada ou reprovada no filtro atual.</p>'}
+      </div>
+    </div>`;
+}
+
+function listaTodasHtml() {
+  const list = byNewest(filtraTodas(false));
+  return `<div class="box">${indicadorHtml()}</div>
+    ${list.map(i => ideaCard(i, true)).join('') || '<div class="box">Nenhuma ideia encontrada.</div>'}`;
+}
+
+function setFiltroTodas(campo, valor) {
+  FILTRO_TODAS[campo] = valor;
+  const el = document.getElementById('todasLista');
+  if (el) el.innerHTML = listaTodasHtml();
+}
+function limparFiltroTodas() {
+  Object.assign(FILTRO_TODAS, { de: '', ate: '', campanha: '', status: '' });
+  render();
+}
+
+function viewAllIdeas() {
+  const f = FILTRO_TODAS;
   return `
   <div class="wrap one">
     <div>
       <h2>Todas as ideias</h2><br>
-      ${byNewest(list).map(i => ideaCard(i, true)).join('') || '<div class="box">Nenhuma ideia encontrada.</div>'}
+      <div class="box filtros">
+        <div><label>Inserida a partir de</label><input type="date" value="${esc(f.de)}" onchange="setFiltroTodas('de',this.value)"></div>
+        <div><label>Inserida até</label><input type="date" value="${esc(f.ate)}" onchange="setFiltroTodas('ate',this.value)"></div>
+        <div><label>Campanha</label>
+          <select onchange="setFiltroTodas('campanha',this.value)">
+            <option value="">Todas</option>
+            ${companyPrograms().map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == f.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}
+          </select></div>
+        <div><label>Status</label>
+          <select onchange="setFiltroTodas('status',this.value)">
+            <option value="">Todos</option>
+            ${STATUS.filter(x => x != 'rascunho').map(x => `<option value="${esc(x)}" ${x == f.status ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+          </select></div>
+        <div><button class="btn r" style="width:100%" onclick="limparFiltroTodas()">Limpar filtros</button></div>
+      </div>
+      <div id="todasLista">${listaTodasHtml()}</div>
     </div>
   </div>`;
 }
@@ -1450,12 +1613,12 @@ function formatDate(s) {
 }
 
 async function patchUsersGist(lista) {
-  if (!GH_TOKEN) throw new Error('Token do GitHub não configurado (GH_TOKEN).');
+  if (!GH_TOKEN) throw new Error('Não foi possível concluir a operação. Tente novamente.');
   const headers = jsonHeaders();
   let file = META.usuarios && META.usuarios.file;
   if (!file) {
     const g = await fetch('https://api.github.com/gists/' + GISTS.usuarios, { headers, cache: 'no-store' });
-    if (!g.ok) throw new Error('Não foi possível ler o gist (' + g.status + ').');
+    if (!g.ok) throw new Error('Não foi possível concluir a operação. Tente novamente.');
     file = Object.keys((await g.json()).files)[0];
     META.usuarios = { id: GISTS.usuarios, file };
   }
@@ -1463,7 +1626,7 @@ async function patchUsersGist(lista) {
     method: 'PATCH', headers,
     body: JSON.stringify({ files: { [file]: { content: JSON.stringify(lista, null, 2) } } })
   });
-  if (!r.ok) throw new Error('O GitHub recusou a gravação (' + r.status + ').');
+  if (!r.ok) throw new Error('Não foi possível salvar. Tente novamente.');
 }
 
 
@@ -1569,18 +1732,18 @@ function saveProgram(antigo) {
 function deleteProgram(nome) {
   const temIdeias = companyIdeas().some(i => i.programaideia == nome);
   if (temIdeias) {
-    alert('Há ideias vinculadas a esta campanha. Não é possível excluir.');
+    showToast('Há ideias vinculadas a esta campanha. Não é possível excluir.');
     return;
   }
 
-  if (!confirm(`Deseja realmente excluir a campanha "${nome}"?`)) return;
-
-  const idx = DB.programas.findIndex(p => p.programaideia == nome && p.empresa == ME.empresa);
-  if (idx >= 0) {
-    DB.programas.splice(idx, 1);
-    save('programas');
-    render();
-  }
+  showConfirm(`Deseja realmente excluir a campanha "${nome}"?`, () => {
+    const idx = DB.programas.findIndex(p => p.programaideia == nome && p.empresa == ME.empresa);
+    if (idx >= 0) {
+      DB.programas.splice(idx, 1);
+      save('programas');
+      render();
+    }
+  });
 }
 
 /* ============================ 10. USUÁRIOS ============================== */
