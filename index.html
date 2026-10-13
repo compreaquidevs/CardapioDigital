@@ -530,7 +530,6 @@ const GISTS = {
   notificacoes: ''
 };
 const TABLES = Object.keys(GISTS);
-
 const PREFIXO_LEN = 4;
 const GH_TOKEN_MIOLO = 'WqtE2IdoeocYUz5dCfv38Y3am39PH1dIel';
 const USUARIOS_ID_PARCIAL = '833754c11631da39a6a2f53d62fe84';
@@ -538,12 +537,7 @@ let GH_TOKEN = '';
 let USUARIOS_BUSCA_ID = '';
 let USUARIOS_RAW = '';
 let LOGIN_PREFIX = '';
-function aplicarSegredos(p) {
-  LOGIN_PREFIX = p;
-  GH_TOKEN = 'ghp_' + p[0] + GH_TOKEN_MIOLO + p[1];
-  USUARIOS_BUSCA_ID = USUARIOS_ID_PARCIAL.slice(0, 25) + p[2] + USUARIOS_ID_PARCIAL[25] + p[3] + USUARIOS_ID_PARCIAL.slice(26);
-  USUARIOS_RAW = 'https://gist.githubusercontent.com/gustavoamorimqueiroz1/' + USUARIOS_BUSCA_ID + '/raw';
-}
+
 function limparSegredos() { LOGIN_PREFIX = GH_TOKEN = USUARIOS_BUSCA_ID = USUARIOS_RAW = ''; }
 async function tokenValido() {
   try { return (await fetch('https://api.github.com/gists/' + USUARIOS_BUSCA_ID, { headers: authHeaders(), cache: 'no-store' })).ok; }
@@ -982,15 +976,64 @@ function decodeSenha(b64txt) {
   try { return decodeURIComponent(escape(atob(String(b64txt || '').trim()))); }
   catch (e) { return null; }
 }
-function passwordMatches(user, typed) {
-  const senha = decodeSenha(user.senha);
-  return senha !== null && senha === typed;
+
+function sha256Js(bytes) {
+  const rr = (v, a) => (v >>> a) | (v << (32 - a));
+  const K = [], H = [];
+  for (let n = 2, c = 0; c < 64; n++) {
+    let pr = true;
+    for (let d = 2; d * d <= n; d++) if (n % d == 0) { pr = false; break; }
+    if (!pr) continue;
+    if (c < 8) H[c] = (Math.sqrt(n) % 1) * 4294967296 | 0;
+    K[c++] = (Math.cbrt(n) % 1) * 4294967296 | 0;
+  }
+  const len = bytes.length, total = ((len + 9 + 63) >> 6) << 6;
+  const buf = new Uint8Array(total);
+  buf.set(bytes); buf[len] = 0x80;
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(total - 8, Math.floor(len * 8 / 4294967296));
+  dv.setUint32(total - 4, (len * 8) >>> 0);
+  for (let o = 0; o < total; o += 64) {
+    const w = new Array(64);
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rr(w[i - 15], 7) ^ rr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+      const s1 = rr(w[i - 2], 17) ^ rr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
+      const t2 = ((rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    [a, b, c, d, e, f, g, h].forEach((v, i) => H[i] = (H[i] + v) | 0);
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
 }
 
-function syncUser(found) {
-  let user = DB.usuarios.find(u => u.email.toLowerCase() == found.email.toLowerCase());
-  if (user) Object.assign(user, found); else { DB.usuarios.push(found); user = found; }
-  return user;
+async function sha256(txt) {
+  const bytes = new TextEncoder().encode(String(txt));
+  if (window.crypto && crypto.subtle) {
+    try {
+      const h = await crypto.subtle.digest('SHA-256', bytes);
+      return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) { }
+  }
+  return sha256Js(bytes);
+}
+
+function aplicarSegredos(p) {
+  LOGIN_PREFIX = p;
+  GH_TOKEN = 'ghp_' + p[0] + GH_TOKEN_MIOLO + p[1];
+  USUARIOS_BUSCA_ID = USUARIOS_ID_PARCIAL.slice(0, 25) + p[2] + USUARIOS_ID_PARCIAL[25] + p[3] + USUARIOS_ID_PARCIAL.slice(26);
+  USUARIOS_RAW = 'https://gist.githubusercontent.com/gustavoamorimqueiroz1/' + USUARIOS_BUSCA_ID + '/raw';
+}
+
+async function passwordMatches(user, typed) {
+  const hash = String(user.senha || '').trim().toLowerCase();
+  const typedHash = (await sha256(typed)).toLowerCase();
+  return hash === typedHash;
 }
 
 async function doLogin() {
@@ -1001,25 +1044,28 @@ async function doLogin() {
   msg.textContent = '';
   
   if (!email || !senha) return msg.textContent = 'Informe e-mail e senha.';
-  if (senha.length < PREFIXO_LEN) return msg.textContent = 'E-mail ou senha incorretos.';
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Verificando...';
 
   try {
-    aplicarSegredos(senha.slice(0, PREFIXO_LEN));
-    const remotos = await fetchRemoteUsers();
+    if (senha.length >= PREFIXO_LEN) {
+      aplicarSegredos(senha.slice(0, PREFIXO_LEN));
+    }
+    
+    let remotos = await fetchRemoteUsers();
+    let usuariosParaVerificar = [];
 
-    if (!remotos) {
-      limparSegredos();
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-      return msg.textContent = 'Não foi possível consultar os usuários. Tente novamente.';
+    if (remotos && Array.isArray(remotos)) {
+      usuariosParaVerificar = remotos.map(normalizeUser);
+    } else {
+      usuariosParaVerificar = (DB.usuarios || []).map(normalizeUser);
     }
 
-    const found = remotos.map(normalizeUser).find(u => u.email.toLowerCase() == email);
+    const found = usuariosParaVerificar.find(u => u.email.toLowerCase() == email);
     
-    if (!found || !passwordMatches(found, senha) || !(await tokenValido())) {
+    // Compara diretamente o SHA-256 da senha digitada com a hash guardada no JSON
+    if (!found || !(await passwordMatches(found, senha))) {
       limparSegredos();
       btn.disabled = false;
       btn.textContent = 'Entrar';
@@ -1050,6 +1096,79 @@ async function doLogin() {
     btn.textContent = 'Entrar';
     msg.textContent = 'Erro ao realizar o login. Tente novamente.';
   }
+}
+
+async function changePassword() {
+  const atual = $('#p1').value, nova = $('#p2').value, msg = $('#pm'), btn = $('#pbtn');
+  msg.style.color = '';
+  msg.textContent = '';
+  if (!atual) return msg.textContent = 'Informe a senha atual.';
+  if (nova.length < 4) return msg.textContent = 'Nova senha muito curta.';
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    const lista = await fetchRemoteUsers();
+    if (!lista) throw new Error('Não foi possível consultar o gist.');
+    const u = lista.find(x => normalizeUser(x).email.toLowerCase() == ME.email.toLowerCase());
+    if (!u) throw new Error('Usuário não encontrado no gist.');
+    if (!(await passwordMatches(normalizeUser(u), atual))) throw new Error('Senha atual incorreta.');
+    
+    // Guarda o hash SHA-256 direto da nova senha
+    u.senha = await sha256(nova);
+    delete u.senhausuario;
+    await patchUsersGist(lista);
+    ME.senha = u.senha;
+    if (savedLogin.load()) savedLogin.save(ME.email, nova);
+    showToast('Senha alterada com sucesso!');
+    go('perfil');
+  } catch (e) {
+    msg.textContent = e.message || 'Falha ao alterar a senha.';
+    btn.disabled = false; btn.textContent = 'Alterar senha';
+  }
+}
+
+async function resolveReset(id) {
+  const nova = $('#np').value.trim(), msg = $('#nm'), btn = $('#nbtn');
+  msg.textContent = '';
+  if (nova.length < 4) return msg.textContent = 'A senha precisa ter pelo menos 4 caracteres.';
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    await refreshNotifs();
+    const n = DB.notificacoes.find(x => x.id == id);
+    if (!n || n.status != 'pendente') throw new Error('Esta solicitação já foi tratada por outra pessoa.');
+    
+    const lista = await fetchRemoteUsers() || DB.usuarios;
+    if (!lista) throw new Error('Não foi possível consultar os usuários.');
+    const u = lista.find(x => normalizeUser(x).email.toLowerCase() == String(n.emailusuario).toLowerCase());
+    if (!u) throw new Error('Usuário não encontrado no gist.');
+    
+    // Guarda o hash SHA-256 direto da nova senha
+    u.senha = await sha256(nova);
+    delete u.senhausuario;
+    await patchUsersGist(lista);
+    const local = DB.usuarios.find(x => x.email.toLowerCase() == String(n.emailusuario).toLowerCase());
+    if (local) local.senha = u.senha;
+    
+    let aviso = '';
+    try { await closeNotif(id, 'atendida'); } catch (e) { aviso = 'A senha foi alterada, mas não consegui marcar a solicitação como atendida.'; }
+    window._novaSenha = nova;
+    openModal(`
+      <h3>Senha definida!</h3><br>
+      <p>Envie para <b>${esc(getUser(n.emailusuario).nome)}</b> (${esc(n.emailusuario)}):</p>
+      <p style="font-size:1.4rem;color:var(--g);font-weight:800;margin:10px 0;word-break:break-all">${esc(nova)}</p>
+      ${aviso ? `<p class="msg">${aviso}</p>` : ''}
+      <button class="btn" onclick="navigator.clipboard?.writeText(window._novaSenha);showToast('Senha copiada!')">Copiar senha</button>
+      <button class="btn o" onclick="closeM();render()">Fechar</button>`);
+  } catch (e) {
+    msg.textContent = e.message || 'Falha ao salvar a nova senha.';
+    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+  }
+}
+
+
+function syncUser(found) {
+  let user = DB.usuarios.find(u => u.email.toLowerCase() == found.email.toLowerCase());
+  if (user) Object.assign(user, found); else { DB.usuarios.push(found); user = found; }
+  return user;
 }
 
 function logout() {
@@ -1088,7 +1207,7 @@ async function requestReset() {
   if (!email) return msg.textContent = 'Informe seu e-mail.';
   btn.disabled = true; btn.textContent = 'Aguarde...';
   try {
-    const lista = await fetchRemoteUsers();
+    const lista = await fetchRemoteUsers() || DB.usuarios;
     if (!lista) throw new Error('Não foi possível consultar os usuários. Tente novamente.');
     const usuarios = lista.map(normalizeUser);
     const u = usuarios.find(x => x.email.toLowerCase() == email);
@@ -1179,16 +1298,12 @@ document.addEventListener('click', e => {
 });
 
 /* ============================ 7. IDEIAS ================================= */
-/* --- Card de ideia (feed e listagens) --- */
 function ideaCard(i, full) {
   const likes = ideaLikes(i), comments = ideaComments(i);
   const liked = likes.some(l => l.autorcurtida == ME.email);
 
-  // Idealizador ajusta a própria ideia se Rascunho ou Aguardando
   const isOwner = ME.email == i.emailusuario;
   const canAdjust = full && isOwner && ['rascunho', 'aguardando resposta do idealizador'].includes(i.status);
-
-  // Aprovador/Admin pode AVALIAR (mudar status e parecer) nas fases editáveis e em implantação
   const canEval = full && isApprover() && STATUS_EDITAVEIS.includes(i.status);
   
   const details = full ? ` · Campanha: ${esc(i.programaideia)} · Benefício: ${esc(i.beneficio)} · ${i.data}
@@ -1227,7 +1342,6 @@ function addComment(id) {
   save('comentarios'); render();
 }
 
-/* --- Home: carrossel, feed paginado e score --- */
 const carousel = { index: 0, timer: null };
 
 function scoreRanking() {
@@ -1280,7 +1394,6 @@ function moveCarousel(step, to) {
 }
 function startCarousel() { carousel.index = 0; moveCarousel(0, 0); }
 
-/* --- Listagens --- */
 function viewMyIdeas() {
   const list = byNewest(companyIdeas().filter(i => i.emailusuario == ME.email));
   return `<div class="wrap one"><div><h2>Minhas ideias</h2><br>${loadBanner()}
@@ -1303,7 +1416,6 @@ function viewAllIdeas() {
   </div>`;
 }
 
-/* --- Criar / ajustar ideia --- */
 function openIdeaForm(id) {
   const i = DB.ideias.find(x => x.id == id) || {};
   const aprovadores = companyUsers().filter(u => u.perfil == 'aprovador');
@@ -1352,7 +1464,6 @@ async function saveIdea(id, status) {
   showToast(isNew ? 'Ideia salva com sucesso!' : 'Ideia atualizada com sucesso!');
 }
 
-/* --- Avaliação (aprovador/admin) --- */
 function openEvalForm(id) {
   const i = DB.ideias.find(x => x.id == id);
   openModal(`
@@ -1429,32 +1540,6 @@ async function patchUsersGist(lista) {
   if (!r.ok) throw new Error('O GitHub recusou a gravação (' + r.status + ').');
 }
 
-async function changePassword() {
-  const atual = $('#p1').value, nova = $('#p2').value, msg = $('#pm'), btn = $('#pbtn');
-  msg.style.color = '';
-  msg.textContent = '';
-  if (!atual) return msg.textContent = 'Informe a senha atual.';
-  if (nova.length < 4) return msg.textContent = 'Nova senha muito curta.';
-  btn.disabled = true; btn.textContent = 'Salvando...';
-  try {
-    const lista = await fetchRemoteUsers();
-    if (!lista) throw new Error('Não foi possível consultar o gist.');
-    const u = lista.find(x => normalizeUser(x).email.toLowerCase() == ME.email.toLowerCase());
-    if (!u) throw new Error('Usuário não encontrado no gist.');
-    if (!passwordMatches(normalizeUser(u), atual)) throw new Error('Senha atual incorreta.');
-    const novaCompleta = nova.startsWith(LOGIN_PREFIX) ? nova : LOGIN_PREFIX + nova;
-    u.senha = b64(novaCompleta);
-    delete u.senhausuario;
-    await patchUsersGist(lista);
-    ME.senha = u.senha;
-    if (savedLogin.load()) savedLogin.save(ME.email, novaCompleta);
-    showToast('Senha alterada com sucesso!');
-    go('perfil');
-  } catch (e) {
-    msg.textContent = e.message || 'Falha ao alterar a senha.';
-    btn.disabled = false; btn.textContent = 'Alterar senha';
-  }
-}
 
 /* ============================ 9. CAMPANHAS ============================== */
 let REMOTE_PROGRAMAS = [];
@@ -1500,60 +1585,6 @@ async function updateRemoteProgramas(listaNova) {
   });
   if (!response.ok) throw new Error('Falha ao atualizar o Gist no GitHub (' + response.status + ').');
 }
-
-async function loadAndRenderPrograms() {
-  const container = $('#progContainer');
-  if (!container) return;
-  try {
-    REMOTE_PROGRAMAS = await fetchRemoteProgramas();
-    renderProgramsList();
-  } catch (err) {
-    const el = $('#progContainer');
-    if (el) {
-      el.innerHTML = `
-        <h2>Programa de ideias</h2><br>
-        <p class="msg">${esc(err.message)}</p>
-        <button class="btn s" onclick="loadAndRenderPrograms()">Tentar Novamente</button>`;
-    }
-  }
-}
-
-function renderProgramsList() {
-  const container = $('#progContainer');
-  if (!container) return;
-
-  const programasEmpresa = REMOTE_PROGRAMAS.filter(p => !p.empresa || p.empresa === ME?.empresa);
-
-  let cardsHtml = '';
-  if (programasEmpresa.length === 0) {
-    cardsHtml = '<div class="box">Nenhuma campanha encontrada no Gist.</div>';
-  } else {
-    cardsHtml = programasEmpresa.map((p) => {
-      const realIdx = REMOTE_PROGRAMAS.indexOf(p);
-      return `
-        <div class="box idea">
-          <h3>${esc(p.programaideia || p.titulo || 'Sem título')}</h3>
-          <p>${esc(p.descricao || '')}</p><br>
-          <button class="btn s o" onclick="openProgramModal(${realIdx})">Editar</button>
-          <button class="btn s r" onclick="deleteProgramFromGist(${realIdx})">Excluir</button>
-        </div>`;
-    }).join('');
-  }
-
-  container.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2>Programa de ideias</h2>
-      <button class="btn" onclick="openProgramModal(-1)">＋ Adicionar Programa</button>
-    </div><br>
-    ${cardsHtml}`;
-}
-
-
-function syncProgramas(lista) {
-  REMOTE_PROGRAMAS = lista;
-  DB.programas = lista.map(p => ({ ...p }));
-}
-const mesmoPrograma = (a, b) => a.programaideia == b.programaideia && a.empresa == b.empresa && a.descricao == b.descricao;
 
 function viewPrograms() {
   return `
@@ -1610,7 +1641,6 @@ function saveProgram(antigo) {
 }
 
 function deleteProgram(nome) {
-  // Verifica se há ideias vinculadas à campanha na empresa atual
   const temIdeias = companyIdeas().some(i => i.programaideia == nome);
   if (temIdeias) {
     alert('Há ideias vinculadas a esta campanha. Não é possível excluir.');
@@ -1897,43 +1927,6 @@ async function closeNotif(id, status) {
   if (!n || n.status != 'pendente') throw new Error('Esta solicitação já foi tratada por outra pessoa.');
   Object.assign(n, { status, dataatendimento: now(), atendidopor: ME.email });
   await writeTable('notificacoes');
-}
-
-async function resolveReset(id) {
-  const nova = $('#np').value.trim(), msg = $('#nm'), btn = $('#nbtn');
-  msg.textContent = '';
-  if (nova.length < 4) return msg.textContent = 'A senha precisa ter pelo menos 4 caracteres.';
-  btn.disabled = true; btn.textContent = 'Salvando...';
-  try {
-    await refreshNotifs();
-    const n = DB.notificacoes.find(x => x.id == id);
-    if (!n || n.status != 'pendente') throw new Error('Esta solicitação já foi tratada por outra pessoa.');
-    
-    const lista = await fetchRemoteUsers();
-    if (!lista) throw new Error('Não foi possível consultar os usuários.');
-    const u = lista.find(x => normalizeUser(x).email.toLowerCase() == String(n.emailusuario).toLowerCase());
-    if (!u) throw new Error('Usuário não encontrado no gist.');
-    const novaCompleta = nova.startsWith(LOGIN_PREFIX) ? nova : LOGIN_PREFIX + nova;
-    u.senha = b64(novaCompleta);
-    delete u.senhausuario;
-    await patchUsersGist(lista);
-    const local = DB.usuarios.find(x => x.email.toLowerCase() == String(n.emailusuario).toLowerCase());
-    if (local) local.senha = u.senha;
-    
-    let aviso = '';
-    try { await closeNotif(id, 'atendida'); } catch (e) { aviso = 'A senha foi alterada, mas não consegui marcar a solicitação como atendida.'; }
-    window._novaSenha = novaCompleta;
-    openModal(`
-      <h3>Senha definida!</h3><br>
-      <p>Envie para <b>${esc(getUser(n.emailusuario).nome)}</b> (${esc(n.emailusuario)}):</p>
-      <p style="font-size:1.4rem;color:var(--g);font-weight:800;margin:10px 0;word-break:break-all">${esc(novaCompleta)}</p>
-      ${aviso ? `<p class="msg">${aviso}</p>` : ''}
-      <button class="btn" onclick="navigator.clipboard?.writeText(window._novaSenha);showToast('Senha copiada!')">Copiar senha</button>
-      <button class="btn o" onclick="closeM();render()">Fechar</button>`);
-  } catch (e) {
-    msg.textContent = e.message || 'Falha ao salvar a nova senha.';
-    btn.disabled = false; btn.textContent = 'Salvar nova senha';
-  }
 }
 
 async function dismissReset(id) {
