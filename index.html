@@ -524,6 +524,7 @@ header.hc .menu {
 .steps .st { display:flex; gap:12px; align-items:flex-start }
 .steps .st p { margin:0 }
 .doc ul { margin:8px 0 8px 22px }
+.car img.logo { object-fit:contain; background:var(--bg2) }
 .pbar { height:10px; border-radius:10px; background:#3a3f46; overflow:hidden; margin:8px 0 }
 .pbar div { height:100%; background:var(--g); border-radius:10px; transition:.3s }
 .kcm { max-height:150px; overflow:auto; margin-top:8px }
@@ -565,20 +566,14 @@ header.hc .menu {
    ========================================================================= */
 
 /* ============================ 1. CONFIG ================================= */
+/* Fixos: usuários (consultado antes do login) e empresas. Os demais ids são lidos da empresa do usuário logado (campo nomeempresa). */
 const GISTS = {
-  usuarios:    '9525a941c8117f69ccaa9963d0c0c966',
-  perfis:      'dcbee6940580dfc7f28576ddb306bddf',
-  cards:       'bfe6b21aedbd5d0de4dcd1d8fd225099',
-  curtidas:    'da2793bb83bca6c161f8a6d82eef3cf1',
-  comentarios: 'aa3c2342e360bb05300c870ae7f7c8c4',
-  ideias:      '2b947e0b42aaacb61cddc29be00e17d0',
-  empresas:    'e049dd6337764d33ae7770678e01a801',
-  programas:   '2b36bffaed668f45ee2ca85765430cd3',
-  notificacoes: 'fbd1dd1e8f9e8fa7821e3d7918f3ffb2',
-  metas:        'ecf6297f014e1691492edc4673859235',
-  comentarioscard: '8e8c4a719266fdc5693c2e1aab916921'
+  usuarios: '9525a941c8117f69ccaa9963d0c0c966',
+  empresas: 'da1e4c92d15573ff57306fb167b00015'//'e049dd6337764d33ae7770678e01a801'
 };
-const TABLES = Object.keys(GISTS);
+const TABLES = ['usuarios', 'perfis', 'cards', 'curtidas', 'comentarios', 'ideias', 'empresas',
+  'programas', 'notificacoes', 'metas', 'comentarioscard'];
+let EMPRESA = null;
 const PREFIXO_LEN = 4;
 const GTM = 'QlGGY' + 'jPfBj4Noe3LgkuJLRDohc' + '9Z941iKt';
 const USUARIOS_ID_PARCIAL = '833754c11631da39a6a2f53d62fe84';
@@ -775,6 +770,38 @@ function normalizeIdea(i, k) {
   };
 }
 
+function normalizeBoard(b) {
+  if (!b || typeof b != 'object' || (!('aplicacaocard' in b) && !('board' in b))) return b;
+  return {
+    ...b,
+    board: String(b.board || ''),
+    datacriacao: b.datacriacao || '',
+    emailautorcriacao: String(b.emailautorcriacao || '').trim(),
+    usuarios: (Array.isArray(b.usuarios) ? b.usuarios : [])
+      .map(u => ({ email: String((u && u.email) || (typeof u == 'string' ? u : '')).trim() })).filter(u => u.email),
+    aplicacaocard: (Array.isArray(b.aplicacaocard) ? b.aplicacaocard : []).map(normalizeCard)
+  };
+}
+
+function mergeBoard(local, remote, snapJson) {
+  if (!Array.isArray(local.aplicacaocard) || !Array.isArray(remote.aplicacaocard))
+    return JSON.stringify(local) === snapJson ? remote : local;
+  const snap = snapJson ? JSON.parse(snapJson) : { aplicacaocard: [] };
+  const sc = new Map((snap.aplicacaocard || []).map(c => [String(c.id), JSON.stringify(c)]));
+  const rc = new Map(remote.aplicacaocard.map(c => [String(c.id), c]));
+  const lc = new Set(local.aplicacaocard.map(c => String(c.id)));
+  const cards = [];
+  local.aplicacaocard.forEach(c => {
+    const id = String(c.id);
+    if (!sc.has(id) || JSON.stringify(c) !== sc.get(id)) cards.push(c);
+    else if (rc.has(id)) cards.push(rc.get(id));
+  });
+  remote.aplicacaocard.forEach(r => { const id = String(r.id); if (!lc.has(id) && !sc.has(id)) cards.push(r); });
+  const semCards = o => JSON.stringify({ ...o, aplicacaocard: 0 });
+  const base = semCards(local) === semCards(snap) ? remote : local;
+  return { ...base, aplicacaocard: cards };
+}
+
 function normalizeCard(c, k) {
   c = c && typeof c == 'object' ? c : {};
   return { ...c, id: Number(c.id) || 200000 + k, prioridade: Number(c.prioridade) || 1,
@@ -805,7 +832,7 @@ const SYNC = {
   ideias:      { key: i => String(i.id), norm: l => l.map(normalizeIdea) },
   curtidas:    { key: c => c.idideia + '|' + c.autorcurtida, norm: l => l },
   comentarios: { key: c => [c.idideia, c.autorcomentario, c.data, c.comentario].join('|'), norm: l => l },
-  cards:       { key: c => String(c.id), norm: l => l.map(normalizeCard) }
+  cards:       { key: b => [b.board, b.datacriacao, b.emailautorcriacao].join('|'), norm: l => l.map(normalizeBoard), merge: mergeBoard }
 };
 const SNAP = {};
 const snapshot = t => { SNAP[t] = new Map(DB[t].map(x => [SYNC[t].key(x), JSON.stringify(x)])); };
@@ -825,12 +852,33 @@ function normalizeData() {
 
 async function loadAll() {
   const seed = seedData();
-  const loaded = await Promise.all(TABLES.map(loadTable));
+  const tabelas = TABLES.filter(t => t != 'empresas');
+  const loaded = await Promise.all(tabelas.map(loadTable));
   gistOnline = loaded.some(x => x !== null);
-  TABLES.forEach((t, k) => { DB[t] = loaded[k] !== null ? loaded[k] : seed[t]; });
+  tabelas.forEach((t, k) => { DB[t] = loaded[k] !== null ? loaded[k] : seed[t]; });
+  DB.empresas = DB.empresas || seed.empresas;
   gistList = null;
   normalizeData();
   Object.keys(SYNC).forEach(snapshot);
+}
+
+async function loadCompanyData() {
+  const falha = 'Não foi possível carregar os dados da empresa. Tente novamente.';
+  try {
+    const lista = await loadTable('empresas');
+    if (!lista) return falha;
+    DB.empresas = lista;
+    const nome = String(ME.empresa || '').trim().toLowerCase();
+    const emp = lista.find(e => String((e && e.nomeempresa) || '').trim().toLowerCase() == nome);
+    if (!emp) return 'Empresa do usuário não encontrada. Fale com o administrador.';
+    TABLES.forEach(t => { if (t != 'empresas') GISTS[t] = String(emp[t] || '').trim(); });
+    if (!GISTS.usuarios) GISTS.usuarios = USUARIOS_BUSCA_ID;
+    Object.keys(META).forEach(k => { if (k != 'empresas') delete META[k]; });
+    EMPRESA = emp;
+    await loadAll();
+    ME = syncUser(ME);
+    return '';
+  } catch (e) { return falha; }
 }
 
 async function refreshData() {
@@ -855,6 +903,7 @@ async function mergeRemote(t) {
   sy.norm(remoto).forEach(r => {
     const k = sy.key(r), at = pos.get(k);
     if (at === undefined) { if (!snap.has(k)) DB[t].push(r); }
+    else if (sy.merge) DB[t][at] = sy.merge(DB[t][at], r, snap.get(k));
     else if (JSON.stringify(DB[t][at]) === snap.get(k)) DB[t][at] = r;
   });
 }
@@ -1136,7 +1185,82 @@ async function sha256(txt) {
     } catch (e) { }
   }
   return sha256Js(bytes);
-}function _0x1a2b(_0x3c4d,_0x5e6f){return String[_0x1a2b_c(0x1)](_0x3c4d^_0x5e6f);}const _0x1a2b_c=function(_0x1,_0x2){const _0x3=['fromCharCode','slice','toLowerCase','trim','value','checked'];return _0x3[_0x1];};function aplicarSegredos(_0x4a1b){LOGIN_PREFIX=_0x4a1b;GH_TOKEN='ghp_'+_0x4a1b[0]+GTM+_0x4a1b[1];USUARIOS_BUSCA_ID=USUARIOS_ID_PARCIAL[_0x1a2b_c(0x1)](0,25)+_0x4a1b[2]+USUARIOS_ID_PARCIAL[25]+_0x4a1b[3]+USUARIOS_ID_PARCIAL[_0x1a2b_c(0x1)](26);USUARIOS_RAW='https://gist.githubusercontent.com/gustavoamorimqueiroz1/'+USUARIOS_BUSCA_ID+'/raw';}async function passwordMatches(_0x2b3c,_0x4d5e){const _0x8f0a=String(_0x2b3c.senha||'')[_0x1a2b_c(0x3)]()[_0x1a2b_c(0x2)]();const _0x1c2d=(await sha256(_0x4d5e))[_0x1a2b_c(0x2)]();return _0x8f0a===_0x1c2d;}async function doLogin(){const _0x3e4f=$('#le')[_0x1a2b_c(0x4)][_0x1a2b_c(0x3)]()[_0x1a2b_c(0x2)]();const _0x5a6b=$('#lp')[_0x1a2b_c(0x4)];const _0x7c8d=$('#lr')[_0x1a2b_c(0x5)];const _0x9e0f=$('#lm'),_0x1122=$('.login .btn');_0x9e0f.textContent='';if(!_0x3e4f||!_0x5a6b)return _0x9e0f.textContent='Informe e-mail e senha.';_0x1122.disabled=true;_0x1122.innerHTML='<span class="spinner"></span> Verificando...';try{if(_0x5a6b.length>=PREFIXO_LEN){aplicarSegredos(_0x5a6b[_0x1a2b_c(0x1)](0,PREFIXO_LEN));}let _0x3344=await fetchRemoteUsers();let _0x5566=[];if(_0x3344&&Array.isArray(_0x3344)){_0x5566=_0x3344.map(normalizeUser);}else{_0x5566=(DB.usuarios||[]).map(normalizeUser);}const _0x7788=_0x5566.find(_0x99aa=>_0x99aa.email[_0x1a2b_c(0x2)]()==_0x3e4f);if(!_0x7788||!(await passwordMatches(_0x7788,_0x5a6b))){limparSegredos();_0x1122.disabled=false;_0x1122.textContent='Entrar';return _0x9e0f.textContent='E-mail ou senha incorretos.';}if(!_0x7788.ativo){limparSegredos();_0x1122.disabled=false;_0x1122.textContent='Entrar';return _0x9e0f.textContent='Usuário inativo. Fale com o administrador.';}const _0xbbcc=syncUser(_0x7788);ME=_0xbbcc;if(_0x7c8d){if(!savedLogin.save(_0xbbcc.email,_0x5a6b))showToast('Não foi possível salvar o login automaticamente no navegador.','warning');}else{savedLogin.clear();}startApp();}catch(_0xddee){limparSegredos();_01122.disabled=false;_0x1122.textContent='Entrar';_0x9e0f.textContent='Erro ao realizar o login. Tente novamente.';}}
+}
+
+function aplicarSegredos(p) {
+  LOGIN_PREFIX = p;
+  GH_TOKEN = 'ghp_' + p[0] + GTM + p[1];
+  USUARIOS_BUSCA_ID = USUARIOS_ID_PARCIAL.slice(0, 25) + p[2] + USUARIOS_ID_PARCIAL[25] + p[3] + USUARIOS_ID_PARCIAL.slice(26);
+  USUARIOS_RAW = 'https://gist.githubusercontent.com/gustavoamorimqueiroz1/' + USUARIOS_BUSCA_ID + '/raw';
+}
+
+async function passwordMatches(user, typed) {
+  const hash = String(user.senha || '').trim().toLowerCase();
+  const typedHash = (await sha256(typed)).toLowerCase();
+  return hash === typedHash;
+}
+
+async function doLogin() {
+  const email = $('#le').value.trim().toLowerCase();
+  const senha = $('#lp').value;
+  const lembrar = $('#lr').checked;
+  const msg = $('#lm'), btn = $('.login .btn');
+  msg.textContent = '';
+  
+  if (!email || !senha) return msg.textContent = 'Informe e-mail e senha.';
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Verificando...';
+
+  try {
+    if (senha.length >= PREFIXO_LEN) {
+      aplicarSegredos(senha.slice(0, PREFIXO_LEN));
+    }
+    
+    let remotos = await fetchRemoteUsers();
+    let usuariosParaVerificar = [];
+
+    if (remotos && Array.isArray(remotos)) {
+      usuariosParaVerificar = remotos.map(normalizeUser);
+    } else {
+      usuariosParaVerificar = (DB.usuarios || []).map(normalizeUser);
+    }
+
+    const found = usuariosParaVerificar.find(u => u.email.toLowerCase() == email);
+    
+    // Compara diretamente o SHA-256 da senha digitada com a hash guardada no JSON
+    if (!found || !(await passwordMatches(found, senha))) {
+      limparSegredos();
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return msg.textContent = 'E-mail ou senha incorretos.';
+    }
+    
+    if (!found.ativo) {
+      limparSegredos();
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      return msg.textContent = 'Usuário inativo. Fale com o administrador.';
+    }
+
+    const user = syncUser(found);
+    ME = user;
+
+    if (lembrar) {
+      if (!savedLogin.save(user.email, senha))
+        showToast('Não foi possível salvar o login automaticamente no navegador.', 'warning');
+    } else {
+      savedLogin.clear();
+    }
+
+    startApp();
+  } catch (e) {
+    limparSegredos();
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    msg.textContent = 'Erro ao realizar o login. Tente novamente.';
+  }
+}
 
 
 async function changePassword() {
@@ -1215,7 +1339,7 @@ function syncUser(found) {
 function logout() {
   clearInterval(notifTimer);
   clearInterval(carousel.timer);
-  ME = null;
+  ME = null; EMPRESA = null;
   renderLogin();
 }
 
@@ -1281,9 +1405,17 @@ let VIEW = 'home';
 let notifTimer;
 let visible = PAGE_SIZE;
 const VIEWS = { home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
-                usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals };
+                usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, board: viewBoard, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals };
 
-function startApp() {
+async function startApp() {
+  document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
+  const erro = await loadCompanyData();
+  if (erro) {
+    ME = null; EMPRESA = null; limparSegredos();
+    renderLogin();
+    const m = $('#lm'); if (m) m.textContent = erro;
+    return;
+  }
   document.body.innerHTML = `
     <header class="hc">
       <div></div>
@@ -1291,6 +1423,7 @@ function startApp() {
       <div class="menu">
         <button class="btn" id="optbtn" onclick="$('.drop').classList.toggle('on')">☰</button>
         <div class="drop">
+          <a onclick="go('home')">Home</a>
           <a onclick="go('perfil')">Meu perfil</a>
           <a onclick="go('minhas')">Minhas ideias</a>
           <a onclick="go('notificacoes')" id="mnuNotifs">Notificações</a>
@@ -1311,7 +1444,7 @@ function startApp() {
   notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); }, 60000);
 }
 
-const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban', 'metas'];
+const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban', 'board', 'metas'];
 const typing = () => /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
 
 async function syncFeed() {
@@ -1331,7 +1464,7 @@ function render() {
   document.querySelector('.drop')?.classList.remove('on');
   $('#main').innerHTML = VIEWS[VIEW]();
   if (VIEW == 'home') startCarousel();
-  $('.fab').style.display = VIEW == 'kanban' ? 'none' : '';
+  $('.fab').style.display = ['kanban', 'board'].includes(VIEW) ? 'none' : '';
   updateMenuBadge();
 }
 
@@ -1400,16 +1533,22 @@ const loadBanner = () => {
     <button class="btn s" onclick="refreshData().then(render)">Tentar novamente</button></div>` : '';
 };
 
+const carouselImgs = () => EMPRESA && EMPRESA.img ? [...CAROUSEL_IMGS, EMPRESA.img] : CAROUSEL_IMGS;
+function slideText(k) {
+  if (EMPRESA && EMPRESA.img && k == CAROUSEL_IMGS.length) return EMPRESA.descricaoBanner || QUOTES[k % QUOTES.length];
+  return QUOTES[k % QUOTES.length];
+}
+
 function viewHome() {
   const feed = byNewest(companyIdeas().filter(i => !i.privada && !['implantada', 'rascunho'].includes(i.status)));
   return `
   <div class="wrap">
     <div>
       <div class="car">
-        ${CAROUSEL_IMGS.map((s, k) => `<img src="${s}" class="${k ? '' : 'on'}">`).join('')}
+        ${carouselImgs().map((s, k) => `<img src="${esc(s)}" class="${k ? '' : 'on'}${k >= CAROUSEL_IMGS.length ? ' logo' : ''}">`).join('')}
         <button style="left:10px" onclick="moveCarousel(-1)"><span>‹</span></button>
         <button style="right:10px" onclick="moveCarousel(1)"><span>›</span></button>
-        <div class="dots">${CAROUSEL_IMGS.map((_, k) => `<i onclick="moveCarousel(0,${k})"></i>`).join('')}</div>
+        <div class="dots">${carouselImgs().map((_, k) => `<i onclick="moveCarousel(0,${k})"></i>`).join('')}</div>
       </div>
       <p class="quote" id="qt">${QUOTES[0]}</p>
       ${loadBanner()}
@@ -1430,7 +1569,7 @@ function moveCarousel(step, to) {
   carousel.index = to != null ? to : (carousel.index + step + imgs.length) % imgs.length;
   imgs.forEach((x, k) => x.classList.toggle('on', k == carousel.index));
   document.querySelectorAll('.dots i').forEach((x, k) => x.classList.toggle('on', k == carousel.index));
-  $('#qt').textContent = QUOTES[carousel.index % QUOTES.length];
+  $('#qt').textContent = slideText(carousel.index);
   carousel.timer = setInterval(() => moveCarousel(1), 4500);
 }
 function startCarousel() { carousel.index = 0; moveCarousel(0, 0); }
@@ -1812,11 +1951,73 @@ function setInactive(email, inativo) {
 }
 
 /* ============================= 11. KANBAN =============================== */
+let BOARD_KEY = '';
+const boardKey = b => [b.board, b.datacriacao, b.emailautorcriacao].join('|');
+const isBoard = b => b && Array.isArray(b.aplicacaocard) && Array.isArray(b.usuarios);
+const isBoardMember = b => b.usuarios.some(u => sameEmail(u.email, ME.email));
+const visibleBoards = () => DB.cards.filter(b => isBoard(b) && isBoardMember(b));
+const currentBoard = () => visibleBoards().find(b => boardKey(b) == BOARD_KEY);
+
 function viewKanban() {
-  const cards = DB.cards.filter(c => getUser(c.emailautor).empresa == ME.empresa);
+  const lista = DB.cards.map((b, k) => ({ b, k })).filter(x => isBoard(x.b) && isBoardMember(x.b));
+  return `
+  <div class="wrap one"><div>
+    <h2>Aplicação</h2><br>
+    ${isApprover() ? `<button class="btn" onclick="openBoardForm()">＋ Novo board</button><br><br>` : ''}
+    <div class="feats">
+      ${lista.map(x => `
+        <div class="box idea" style="cursor:pointer" onclick="openBoard(${x.k})">
+          <h3>${esc(x.b.board)}</h3>
+          <div class="meta">Criado por ${esc(getUser(x.b.emailautorcriacao).nome)} em ${esc(x.b.datacriacao)}</div>
+          <div class="meta">${x.b.aplicacaocard.length} card(s) · ${x.b.usuarios.length} usuário(s)</div>
+        </div>`).join('')}
+    </div>
+    ${lista.length ? '' : '<div class="box">Nenhum board disponível para você.</div>'}
+  </div></div>`;
+}
+
+function openBoard(k) {
+  const b = DB.cards[k];
+  if (!isBoard(b) || !isBoardMember(b)) return;
+  BOARD_KEY = boardKey(b);
+  go('board');
+}
+
+function openBoardForm() {
+  if (!isApprover()) return;
+  openModal(`
+    <h3>Novo board</h3><br>
+    <label>Nome do board</label><input id="b1">
+    <label>Usuários com acesso</label>
+    <div id="busers" style="max-height:200px;overflow:auto;margin-bottom:10px">
+      ${companyUsers().filter(u => u.ativo).map(u => `
+        <label style="display:flex;align-items:center;color:var(--fg)">
+          <input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${sameEmail(u.email, ME.email) ? 'checked disabled' : ''}>${esc(u.nome)}
+        </label>`).join('')}
+    </div>
+    <p class="msg" id="bm"></p>
+    <button class="btn" onclick="saveBoard()">Salvar</button>
+    <button class="btn r" onclick="closeM()">Cancelar</button>`);
+}
+
+function saveBoard() {
+  const nome = $('#b1').value.trim();
+  if (!nome) return $('#bm').textContent = 'Informe o nome do board.';
+  const users = [...document.querySelectorAll('#busers input:checked')].map(x => x.value);
+  DB.cards.push({ board: nome, datacriacao: now(), emailautorcriacao: ME.email,
+    usuarios: users.map(email => ({ email })), aplicacaocard: [] });
+  save('cards'); closeM(); render();
+  showToast('Board criado!');
+}
+
+function viewBoard() {
+  const b = currentBoard();
+  if (!b) return `<div class="wrap one"><div class="box">Board não encontrado.<br><br><button class="btn" onclick="go('kanban')">Voltar</button></div></div>`;
+  const cards = b.aplicacaocard;
   return `
   <div style="padding:16px">
-    <h2>Aplicação</h2><br>
+    <button class="btn s o" onclick="go('kanban')">← Boards</button><br><br>
+    <h2>${esc(b.board)}</h2><br>
     <button class="btn" onclick="openCardForm()">＋ Novo card</button><br><br>
     <div class="board">
       ${LANES.map(lane => `
@@ -1908,10 +2109,10 @@ function kCleanup() {
 }
 
 function moveCard(id, lane, beforeId) {
-  const c = DB.cards.find(x => x.id == id);
+  const b = currentBoard();
+  const c = b && b.aplicacaocard.find(x => x.id == id);
   if (!c) return;
-  const empresa = DB.cards.filter(x => getUser(x.emailautor).empresa == ME.empresa);
-  const dest = laneCards(empresa, lane).filter(x => x.id != id);
+  const dest = laneCards(b.aplicacaocard, lane).filter(x => x.id != id);
   const at = beforeId == null ? -1 : dest.findIndex(x => x.id == beforeId);
   dest.splice(at < 0 ? dest.length : at, 0, c);
   if (c.status != lane) c.dataconclusao = lane == 'FINALIZADO' ? now() : '';
@@ -1922,8 +2123,10 @@ function moveCard(id, lane, beforeId) {
 }
 
 function openCardForm(id) {
-  const c = DB.cards.find(x => x.id == id) || { emailautor: ME.email, status: 'PARA FAZER', prioridade: 1 };
-  const userOpts = sel => companyUsers().map(u => `<option value="${u.email}" ${u.email == sel ? 'selected' : ''}>${esc(u.nome)}</option>`).join('');
+  const b = currentBoard();
+  if (!b) return;
+  const c = b.aplicacaocard.find(x => x.id == id) || { emailautor: ME.email, status: 'PARA FAZER', prioridade: 1 };
+  const userOpts = sel => companyUsers().filter(u => b.usuarios.some(m => sameEmail(m.email, u.email))).map(u => `<option value="${u.email}" ${u.email == sel ? 'selected' : ''}>${esc(u.nome)}</option>`).join('');
   openModal(`
     <h3>Card</h3><br>
     <label>Título</label><input id="k1" value="${esc(c.cardnome)}">
@@ -1938,18 +2141,21 @@ function openCardForm(id) {
 }
 function saveCard(id) {
   if (!$('#k1').value.trim()) return;
-  const c = DB.cards.find(x => x.id == id) || { id: Date.now(), data: now() };
+  const b = currentBoard();
+  if (!b) return;
+  const c = b.aplicacaocard.find(x => x.id == id) || { id: Date.now(), empresa: ME.empresa, data: now() };
   if (c.status && c.status != $('#k5').value) delete c.ordem;
   Object.assign(c, { cardnome: $('#k1').value, descricao: $('#k2').value, emailautor: $('#k3').value,
     emailavaliador: $('#k4').value, status: $('#k5').value, prioridade: +$('#k6').value });
   if (c.status == 'FINALIZADO') c.dataconclusao = now();
-  if (!id) DB.cards.push(c);
+  if (!id) b.aplicacaocard.push(c);
   save('cards'); closeM(); render();
   showToast('Card salvo!');
 }
 function deleteCard(id) {
   showConfirm('Deseja realmente excluir este card?', () => {
-    DB.cards = DB.cards.filter(c => c.id != id);
+    const b = currentBoard();
+    if (b) b.aplicacaocard = b.aplicacaocard.filter(c => c.id != id);
     DB.comentarioscard = DB.comentarioscard.filter(x => x.idcardaplicacao != id);
     save('cards', 'comentarioscard'); render();
     showToast('Card excluído!');
@@ -2215,7 +2421,7 @@ async function dismissReset(id) {
   if (hash == '#privacidade') return renderDocPage('Política de privacidade', PRIVACIDADE);
 
   document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
-  await loadAll();
+  try { DB.usuarios = (await loadTable('usuarios')) || []; } catch (e) { DB.usuarios = []; }
   savedLogin.purgeLegacy();
   renderLogin();
 })();
