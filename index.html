@@ -604,7 +604,8 @@ const TABLES = ['usuarios', 'perfis', 'cards', 'curtidas', 'comentarios', 'ideia
 let EMPRESA = null;
 const PREFIXO_LEN = 4;
 const GTM = 'QlGGY' + 'jPfBj4Noe3LgkuJLRDohc' + '9Z941iKt';
-const USUARIOS_ID_PARCIAL = '833754c11631da39a6a2f53d62fe84';
+const USUARIOS_GIST_ID = '9525a941c8117f69ccaa9963d0c0c966';
+const USUARIOS_GIST_DONO = 'compreaquidevs';
 let GH_TOKEN = '';
 let USUARIOS_BUSCA_ID = '';
 let USUARIOS_RAW = '';
@@ -1162,6 +1163,21 @@ const savedLogin = (() => {
   };
 })();
 
+const sessao = (() => {
+  const KEY = 'ins_sessao';
+  return {
+    save(email, senha) { try { sessionStorage.setItem(KEY, JSON.stringify({ email: String(email).trim(), senha: b64(senha) })); } catch (e) { } },
+    load() {
+      try {
+        const l = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+        const senha = l && decodeSenha(l.senha);
+        return l && l.email && senha ? { email: l.email, senha } : null;
+      } catch (e) { return null; }
+    },
+    clear() { try { sessionStorage.removeItem(KEY); } catch (e) { } }
+  };
+})();
+
 function renderLogin() {
   const saved = savedLogin.load() || { email: '', senha: '' };
   document.body.innerHTML = `
@@ -1234,14 +1250,27 @@ async function sha256(txt) {
 function aplicarSegredos(p) {
   LOGIN_PREFIX = p;
   GH_TOKEN = 'ghp_' + p[0] + GTM + p[1];
-  USUARIOS_BUSCA_ID = USUARIOS_ID_PARCIAL.slice(0, 25) + p[2] + USUARIOS_ID_PARCIAL[25] + p[3] + USUARIOS_ID_PARCIAL.slice(26);
-  USUARIOS_RAW = 'https://gist.githubusercontent.com/gustavoamorimqueiroz1/' + USUARIOS_BUSCA_ID + '/raw';
+  USUARIOS_BUSCA_ID = USUARIOS_GIST_ID;
+  USUARIOS_RAW = 'https://gist.githubusercontent.com/' + USUARIOS_GIST_DONO + '/' + USUARIOS_GIST_ID + '/raw';
 }
 
 async function passwordMatches(user, typed) {
   const hash = String(user.senha || '').trim().toLowerCase();
   const typedHash = (await sha256(typed)).toLowerCase();
   return hash === typedHash;
+}
+
+async function validarCredenciais(email, senha) {
+  if (senha.length >= PREFIXO_LEN) aplicarSegredos(senha.slice(0, PREFIXO_LEN));
+
+  const remotos = await fetchRemoteUsers();
+  const lista = (remotos && Array.isArray(remotos) ? remotos : (DB.usuarios || [])).map(normalizeUser);
+  const found = lista.find(u => u.email.toLowerCase() == email);
+
+  // Compara diretamente o SHA-256 da senha digitada com a hash guardada no JSON
+  if (!found || !(await passwordMatches(found, senha))) { limparSegredos(); return { erro: 'E-mail ou senha incorretos.' }; }
+  if (!found.ativo) { limparSegredos(); return { erro: 'Usuário inativo. Fale com o administrador.' }; }
+  return { user: syncUser(found) };
 }
 
 async function doLogin() {
@@ -1257,41 +1286,19 @@ async function doLogin() {
   btn.innerHTML = '<span class="spinner"></span> Verificando...';
 
   try {
-    if (senha.length >= PREFIXO_LEN) {
-      aplicarSegredos(senha.slice(0, PREFIXO_LEN));
-    }
-    
-    let remotos = await fetchRemoteUsers();
-    let usuariosParaVerificar = [];
-
-    if (remotos && Array.isArray(remotos)) {
-      usuariosParaVerificar = remotos.map(normalizeUser);
-    } else {
-      usuariosParaVerificar = (DB.usuarios || []).map(normalizeUser);
-    }
-
-    const found = usuariosParaVerificar.find(u => u.email.toLowerCase() == email);
-    
-    // Compara diretamente o SHA-256 da senha digitada com a hash guardada no JSON
-    if (!found || !(await passwordMatches(found, senha))) {
-      limparSegredos();
+    const r = await validarCredenciais(email, senha);
+    if (r.erro) {
       btn.disabled = false;
       btn.textContent = 'Entrar';
-      return msg.textContent = 'E-mail ou senha incorretos.';
+      return msg.textContent = r.erro;
     }
     
-    if (!found.ativo) {
-      limparSegredos();
-      btn.disabled = false;
-      btn.textContent = 'Entrar';
-      return msg.textContent = 'Usuário inativo. Fale com o administrador.';
-    }
-
-    const user = syncUser(found);
-    ME = user;
+    ME = r.user;
+	
+	sessao.save(ME.email,senha);
 
     if (lembrar) {
-      if (!savedLogin.save(user.email, senha))
+      if (!savedLogin.save(ME.email, senha))
         showToast('Não foi possível salvar o login automaticamente no navegador.', 'warning');
     } else {
       savedLogin.clear();
@@ -1327,6 +1334,7 @@ async function changePassword() {
     await patchUsersGist(lista);
     ME.senha = u.senha;
     if (savedLogin.load()) savedLogin.save(ME.email, nova);
+	if(sessao.load()) sessao.save(ME.email, nova);
     showToast('Senha alterada com sucesso!');
     go('perfil');
   } catch (e) {
@@ -1381,6 +1389,7 @@ function syncUser(found) {
 }
 
 function logout() {
+  sessao.clear();
   clearInterval(notifTimer);
   clearInterval(carousel.timer);
   ME = null; EMPRESA = null;
@@ -1486,7 +1495,7 @@ async function startApp() {
   go('home');
   checkPrazos();
   clearInterval(notifTimer);
-  notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); checkPrazos(); }, 60000);
+  notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); checkPrazos(); }, 60*60000);
 }
 
 const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban', 'board', 'metas', 'indicadores'];
@@ -3055,6 +3064,15 @@ async function dismissReset(id) {
   document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
   try { DB.usuarios = (await loadTable('usuarios')) || []; } catch (e) { DB.usuarios = []; }
   savedLogin.purgeLegacy();
+  
+  const ativa = sessao.load();
+  if (ativa) {
+    try {
+      const r = await validarCredenciais(ativa.email.toLowerCase(), ativa.senha);
+      if (r.user) { ME = r.user; return startApp(); }
+    } catch (e) { limparSegredos(); }
+    sessao.clear();
+  }
   renderLogin();
 })();
 </script>
