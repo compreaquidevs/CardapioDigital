@@ -530,6 +530,34 @@ header.hc .menu {
 .kcm { max-height:150px; overflow:auto; margin-top:8px }
 .kc input { user-select:text; -webkit-user-select:text }
 
+/* --- novos recursos --- */
+.box.idea.late,.idea.late { border-left-color:#e53935 }
+.box.late { border-color:#e53935 }
+.badge.late { background:#e53935; color:#fff }
+.kc.late { box-shadow:0 0 0 2px #e53935 }
+.kc.arq { opacity:.6 }
+.tag { display:inline-block; background:var(--bg3); border:1px solid #444; color:var(--g); border-radius:20px; padding:1px 10px; font-size:.78rem; margin:0 4px 4px 0; cursor:pointer }
+.tag.on { background:var(--g); color:#111; border-color:var(--g) }
+.men { color:var(--g); font-weight:700 }
+.mnt { display:none; background:var(--bg3); border:1px solid var(--g); border-radius:10px; margin-top:4px; overflow:hidden }
+.mnt.on { display:block }
+.mnt div { padding:7px 12px; cursor:pointer; font-size:.9rem }
+.mnt div:hover { background:var(--g); color:#111 }
+.dup { background:var(--bg3); border:1px dashed #ffd93b; border-radius:10px; padding:8px 12px; margin:-4px 0 10px; font-size:.85rem }
+.tl summary { cursor:pointer; color:var(--g); font-size:.88rem; margin:6px 0 }
+.tlb { border-left:2px solid #3a3f46; margin:8px 0 4px 5px; padding-left:16px }
+.tle { position:relative; padding:0 0 10px; font-size:.88rem }
+.tle i { position:absolute; left:-22px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--g) }
+.car .sl { position:absolute; inset:0; opacity:0; transition:.8s; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px 64px; background:linear-gradient(135deg,#1f3a1a,#26292e) }
+.car .sl.on { opacity:1 }
+.car .sl h2 { color:var(--g); margin:6px 0 }
+.car .sl small { color:#ffd93b; font-weight:700; letter-spacing:.04em }
+.brow { display:flex; align-items:center; gap:10px; margin:5px 0; font-size:.88rem }
+.brow .bl { width:120px; flex:none; color:var(--mut); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.brow .bt { flex:1; height:12px; background:#3a3f46; border-radius:8px; overflow:hidden }
+.brow .bt div { height:100%; background:var(--g) }
+.kpi { font-size:1.8rem; font-weight:800; color:var(--g) }
+
 @media (max-width:820px) {
   .wrap { grid-template-columns:1fr }
   .car { height:170px }
@@ -610,6 +638,9 @@ const QUOTES = [
   'O futuro pertence a quem ousa propor.'
 ];
 const PAGE_SIZE = 15;
+const PRAZO_AVALIACAO_DIAS = 5; /* dias parada em avaliação até o lembrete ao aprovador e o destaque de atraso */
+const STATUS_AVALIACAO = ['pendente', 'em avaliação inicial', 'em avaliação de negócio'];
+const STATUS_FIM = ['em implantação', 'implantada', 'reprovada'];
 
 /* =========================== 2. UTILITÁRIOS ============================= */
 const $ = s => document.querySelector(s);
@@ -631,6 +662,12 @@ function parseLooseJson(text) {
 const esc = s => String(s ?? '').replace(/[&<>"]/g,
   c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const pad = n => String(n).padStart(2, '0');
+const semAcento = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const toList = v => (Array.isArray(v) ? v : typeof v == 'string' ? v.split(',') : []).map(x => String(x ?? '').trim()).filter(Boolean);
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const fmtIso = s => { const p = String(s || '').split('-'); return p.length == 3 ? `${p[2]}/${p[1]}/${p[0]}` : ''; };
+const diasDesde = s => (Date.now() - parseDate(s)) / 86400000;
 
 function showToast(msg, type = 'info') {
   let container = document.getElementById('toast-container');
@@ -766,7 +803,11 @@ function normalizeIdea(i, k) {
     dataconclusao: firstOf(i, 'dataconclusao'),
     parecer: firstOf(i, 'parecer'),
     privada: toBool(i.privada),
-    status: String(firstOf(i, 'status') || 'pendente').trim()
+    status: String(firstOf(i, 'status') || 'pendente').trim(),
+    tags: toList(i.tags),
+    coautores: toList(i.coautores),
+    anexos: (Array.isArray(i.anexos) ? i.anexos : []).filter(a => a && typeof a.dados == 'string'),
+    historico: (Array.isArray(i.historico) ? i.historico : []).filter(h => h && typeof h == 'object')
   };
 }
 
@@ -816,12 +857,15 @@ function normalizeMeta(m) {
   const submeta = (Array.isArray(m.submeta) ? m.submeta : []).map(x => ({
     ...(x && typeof x == 'object' ? x : {}),
     descricao: String((x && x.descricao) || ''),
-    concluida: toBool(x && x.concluida)
+    concluida: toBool(x && x.concluida),
+    responsavel: String((x && x.responsavel) || '').trim(),
+    concluidaPor: String((x && x.concluidaPor) || '').trim()
   }));
   const usuarios = (Array.isArray(m.usuarios) ? m.usuarios : [])
     .map(u => ({ email: String((u && u.email) || (typeof u == 'string' ? u : '')).trim() }))
     .filter(u => u.email);
   return { ...m, meta: String(m.meta || ''), autor: String(m.autor || '').trim(),
+           campanha: String(m.campanha || ''), alvo: Number(m.alvo) || 0, avisoVencida: m.avisoVencida || '',
            dataCriacao: m.dataCriacao || '', dataPrevisaoConclusao: m.dataPrevisaoConclusao || '',
            submeta, usuarios, porcentagemConclusao: metaPct(submeta) };
 }
@@ -1405,7 +1449,7 @@ let VIEW = 'home';
 let notifTimer;
 let visible = PAGE_SIZE;
 const VIEWS = { home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
-                usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, board: viewBoard, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals };
+                usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, board: viewBoard, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals, indicadores: viewIndicadores };
 
 async function startApp() {
   document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
@@ -1428,7 +1472,7 @@ async function startApp() {
           <a onclick="go('minhas')">Minhas ideias</a>
           <a onclick="go('notificacoes')" id="mnuNotifs">Notificações</a>
           <a onclick="go('metas')">Metas</a>
-          ${isApprover() ? `<a onclick="go('todas')">Todas as ideias</a><a onclick="go('programas')">Programa de ideias</a>` : ''}
+          ${isApprover() ? `<a onclick="go('todas')">Todas as ideias</a><a onclick="go('programas')">Programa de ideias</a><a onclick="go('indicadores')">Indicadores</a>` : ''}
           ${isAdmin() ? `<a onclick="go('usuarios')">Gestão de usuários</a>` : ''}
           <a onclick="go('kanban')">Aplicação</a>
           <a href="#termos" target="_blank">Termos de uso</a>
@@ -1440,11 +1484,12 @@ async function startApp() {
     <main id="main"></main>
     <div class="fab"><button class="btn" onclick="openIdeaForm()">＋ Criar ideia</button></div>`;
   go('home');
+  checkPrazos();
   clearInterval(notifTimer);
-  notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); }, 60000);
+  notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); checkPrazos(); }, 60000);
 }
 
-const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban', 'board', 'metas'];
+const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban', 'board', 'metas', 'indicadores'];
 const typing = () => /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
 
 async function syncFeed() {
@@ -1473,6 +1518,107 @@ document.addEventListener('click', e => {
 });
 
 /* ============================ 7. IDEIAS ================================= */
+/* ---- histórico, tags, anexos, menções ---- */
+const ultimaMov = i => (i.historico && i.historico.length) ? i.historico[i.historico.length - 1].data : i.data;
+const ideaAtrasada = i => STATUS_AVALIACAO.includes(i.status) && diasDesde(ultimaMov(i)) > PRAZO_AVALIACAO_DIAS;
+
+function addHist(i, de, para, parecer) {
+  if (!Array.isArray(i.historico)) i.historico = [];
+  i.historico.push({ data: now(), autor: ME.email, de: de || '', para, parecer: parecer || '' });
+}
+
+function historicoHtml(i) {
+  const h = (i.historico && i.historico.length) ? i.historico : [
+    { data: i.data, autor: i.emailusuario, criada: true },
+    ...(i.status != 'pendente' ? [{ data: i.dataconclusao || '', autor: i.emailaprovador, para: i.status, parecer: i.parecer }] : [])
+  ];
+  return `<details class="tl"><summary>🕒 Histórico de status (${h.length})</summary><div class="tlb">
+    ${h.map(e => {
+      const titulo = e.criada ? 'Ideia criada'
+        : (e.de && e.de === e.para) ? 'Parecer atualizado'
+        : e.de ? `${esc(e.de)} →` : 'Registrada como';
+      const badge = e.para && !(e.de && e.de === e.para) ? ` <span class="badge s-${STATUS_CSS[e.para] || 'rascunho'}">${esc(e.para)}</span>` : '';
+      return `<div class="tle"><i></i><b>${e.criada ? titulo : titulo}</b>${badge}
+        <div class="meta" style="margin:2px 0">${esc(e.data || 'data não registrada')}${e.autor ? ' · ' + esc(getUser(e.autor).nome) : ''}</div>
+        ${e.parecer ? `<div class="cm"><b>Parecer:</b> ${esc(e.parecer)}</div>` : ''}</div>`;
+    }).join('')}
+  </div></details>`;
+}
+
+const tagsHtml = i => (i.tags || []).length
+  ? `<div style="margin:6px 0">${i.tags.map(t => `<span class="tag" data-t="${esc(t)}" onclick="setTag(this.dataset.t)">#${esc(t)}</span>`).join('')}</div>` : '';
+
+function anexosHtml(i) {
+  const lista = (i.anexos || []).filter(a => String(a.dados).startsWith('data:'));
+  if (!lista.length) return '';
+  return `<div class="meta">📎 ${lista.map(a => String(a.tipo).startsWith('image/')
+    ? `<a href="${esc(a.dados)}" download="${esc(a.nome)}" title="${esc(a.nome)}"><img src="${esc(a.dados)}" alt="${esc(a.nome)}" style="height:70px;border-radius:8px;vertical-align:middle;margin:2px"></a>`
+    : `<a href="${esc(a.dados)}" download="${esc(a.nome)}">${esc(a.nome)}</a>`).join(' ')}</div>`;
+}
+
+function cardDaIdeia(i) {
+  const v = i.idcard;
+  if (!v || !v.key) return null;
+  const b = DB.cards.find(x => isBoard(x) && boardKey(x) == v.key);
+  return b && b.aplicacaocard.some(c => c.id == v.idcard) ? b : null;
+}
+
+/* menções com @ */
+const MN_LIST = {};
+function mentionTokens() {
+  const us = companyUsers().filter(u => u.ativo);
+  const primeiros = {};
+  us.forEach(u => { const f = String(u.nome || '').trim().split(/\s+/)[0].toLowerCase(); if (f) primeiros[f] = (primeiros[f] || 0) + 1; });
+  const out = [];
+  us.forEach(u => {
+    const nome = String(u.nome || '').trim();
+    if (nome) out.push({ tok: nome, email: u.email });
+    const f = nome.split(/\s+/)[0];
+    if (f && f != nome && primeiros[f.toLowerCase()] == 1) out.push({ tok: f, email: u.email });
+  });
+  return out.sort((a, b) => b.tok.length - a.tok.length);
+}
+function mentionedEmails(texto) {
+  const out = new Set();
+  mentionTokens().forEach(({ tok, email }) => {
+    if (sameEmail(email, ME.email) || out.has(email)) return;
+    if (new RegExp('@' + escRe(tok) + '(?![\\p{L}\\p{N}_])', 'iu').test(String(texto))) out.add(email);
+  });
+  return [...out];
+}
+function fmtComent(texto) {
+  const h = esc(texto), t = mentionTokens();
+  if (!t.length) return h;
+  const re = new RegExp('@(' + t.map(x => escRe(esc(x.tok))).join('|') + ')(?![\\p{L}\\p{N}_])', 'giu');
+  return h.replace(re, m => `<span class="men">${m}</span>`);
+}
+function notifMencoes(texto, onde, extra) {
+  return mentionedEmails(texto).map(e => ({ tipo: 'mencao', destinoEmail: e, titulo: 'Você foi citado em um comentário',
+    mensagem: `${ME.nome} citou você em um comentário ${onde}.`, ...extra }));
+}
+function mentionSuggest(el) {
+  const box = document.getElementById('mn_' + el.id);
+  if (!box) return;
+  const m = /(^|\s)@([^\s@]{0,30})$/.exec(el.value.slice(0, el.selectionStart));
+  if (!m) { box.classList.remove('on'); box.innerHTML = ''; return; }
+  const q = semAcento(m[2]);
+  const us = companyUsers().filter(u => u.ativo && !sameEmail(u.email, ME.email) && semAcento(u.nome).includes(q)).slice(0, 5);
+  MN_LIST[el.id] = us.map(u => u.nome);
+  box.innerHTML = us.map((u, k) => `<div onmousedown="event.preventDefault();pickMention('${el.id}',${k})">${esc(u.nome)}</div>`).join('');
+  box.classList.toggle('on', us.length > 0);
+}
+function pickMention(id, k) {
+  const el = document.getElementById(id), nome = (MN_LIST[id] || [])[k];
+  if (!el || !nome) return;
+  const pos = el.selectionStart;
+  const antes = el.value.slice(0, pos).replace(/@[^\s@]*$/, '@' + nome + ' ');
+  el.value = antes + el.value.slice(pos);
+  el.focus();
+  el.setSelectionRange(antes.length, antes.length);
+  const box = document.getElementById('mn_' + id);
+  if (box) { box.classList.remove('on'); box.innerHTML = ''; }
+}
+
 function ideaCard(i, full) {
   const likes = ideaLikes(i), comments = ideaComments(i);
   const liked = likes.some(l => l.autorcurtida == ME.email);
@@ -1480,27 +1626,36 @@ function ideaCard(i, full) {
   const isOwner = ME.email == i.emailusuario;
   const canAdjust = full && isOwner && ['rascunho', 'aguardando resposta do idealizador'].includes(i.status);
   const canEval = full && isApprover() && STATUS_EDITAVEIS.includes(i.status);
-  
+  const atrasada = full && ideaAtrasada(i);
+  const cardBoard = full ? cardDaIdeia(i) : null;
+  const canToCard = full && isApprover() && i.status == 'em implantação' && !cardBoard;
+  const coaut = (i.coautores || []).length ? ` · Coautores: ${i.coautores.map(e => esc(getUser(e).nome)).join(', ')}` : '';
+
   const details = full ? ` · Campanha: ${esc(i.programaideia)} · Benefício: ${esc(i.beneficio)} · ${i.data}
       · Conclusão: ${i.dataconclusao || '-'} · Aprovador: ${esc(getUser(i.emailaprovador).nome)}${i.privada ? ' · 🔒 privada' : ''}` : '';
 
   return `
-  <div class="box idea">
-    <h3>${esc(i.titulo)} ${full ? `<span class="badge s-${STATUS_CSS[i.status]}">${i.status}</span>` : ''}</h3>
+  <div class="box idea${atrasada ? ' late' : ''}">
+    <h3>${esc(i.titulo)} ${full ? `<span class="badge s-${STATUS_CSS[i.status]}">${i.status}</span>` : ''}${atrasada ? ` <span class="badge late">⏰ atrasada há ${Math.floor(diasDesde(ultimaMov(i)))} dias</span>` : ''}</h3>
     <p>${esc(i.descricao)}</p>
-    <div class="meta">Por ${esc(getUser(i.emailusuario).nome)}${details}</div>
+    ${tagsHtml(i)}${anexosHtml(i)}
+    <div class="meta">Por ${esc(getUser(i.emailusuario).nome)}${coaut}${details}</div>
     ${full && i.parecer ? `<div class="cm"><b>Parecer:</b> ${esc(i.parecer)}</div>` : ''}
+    ${full ? historicoHtml(i) : ''}
     <div class="act">
       <button class="${liked ? 'on' : ''}" onclick="toggleLike(${i.id})">👍 ${likes.length}</button>
       <button onclick="document.getElementById('c${i.id}').focus()">💬 ${comments.length}</button>
       ${canAdjust ? `<button onclick="openIdeaForm(${i.id})">✏️ Ajustar</button>` : ''}
       ${canEval ? `<button onclick="openEvalForm(${i.id})">🛠 Avaliar</button>` : ''}
+      ${canToCard ? `<button onclick="openIdeaToCard(${i.id})">📋 Criar card</button>` : ''}
+      ${cardBoard ? `<small class="meta">📋 Card criado no board "${esc(cardBoard.board)}"</small>` : ''}
     </div>
-    ${comments.map(c => `<div class="cm"><b>${esc(getUser(c.autorcomentario).nome)}</b> <small>${c.data}</small><br>${esc(c.comentario)}</div>`).join('')}
+    ${comments.map(c => `<div class="cm"><b>${esc(getUser(c.autorcomentario).nome)}</b> <small>${c.data}</small><br>${fmtComent(c.comentario)}</div>`).join('')}
     <div class="row" style="margin-top:8px">
-      <input id="c${i.id}" placeholder="Comentar..." onkeydown="if(event.key=='Enter')addComment(${i.id})">
+      <input id="c${i.id}" placeholder="Comentar... (use @ para citar alguém)" autocomplete="off" oninput="mentionSuggest(this)" onkeydown="if(event.key=='Enter')addComment(${i.id})">
       <button class="btn s" onclick="addComment(${i.id})">Enviar</button>
     </div>
+    <div class="mnt" id="mn_c${i.id}"></div>
   </div>`;
 }
 
@@ -1514,17 +1669,93 @@ function addComment(id) {
   const texto = $('#c' + id).value.trim();
   if (!texto) return;
   DB.comentarios.push({ idideia: id, comentario: texto, autorcomentario: ME.email, data: now() });
+  const i = DB.ideias.find(x => x.id == id);
+  pushNotifications(notifMencoes(texto, `na ideia "${i ? i.titulo : ''}"`, { idideia: id }));
   save('comentarios'); render();
 }
 
 const carousel = { index: 0, timer: null };
 
+const RANK = { modo: 'geral', mes: todayIso().slice(0, 7), campanha: '' };
+const mesDe = i => { const d = parseDate(i.data); return isNaN(d) ? '' : `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; };
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const nomeMes = ym => { const [y, m] = ym.split('-'); return MESES[+m - 1] + ' de ' + y; };
+const rotuloMes = ym => { const [y, m] = ym.split('-'); return MESES[+m - 1].slice(0, 3) + '/' + y.slice(2); };
+
 function scoreRanking() {
+  const dentro = i => RANK.modo == 'mes' ? mesDe(i) == RANK.mes
+    : RANK.modo == 'campanha' ? i.programaideia == RANK.campanha : true;
   return companyUsers().map(u => {
-    const mine = DB.ideias.filter(i => i.emailusuario == u.email);
+    const mine = DB.ideias.filter(i => i.emailusuario == u.email && dentro(i));
     const pontos = mine.length * 20 + mine.reduce((a, i) => a + ideaLikes(i).length + ideaComments(i).length * 2, 0);
     return { u, pontos };
   }).sort((a, b) => b.pontos - a.pontos);
+}
+
+function rankingInner() {
+  const progs = companyPrograms();
+  const titulo = RANK.modo == 'mes' ? 'Ranking do mês' : RANK.modo == 'campanha' ? 'Ranking da campanha' : 'Score geral';
+  return `
+    <h3 style="color:var(--g)">${titulo}</h3>
+    <select onchange="setRank('modo',this.value)">
+      <option value="geral" ${RANK.modo == 'geral' ? 'selected' : ''}>Geral</option>
+      <option value="mes" ${RANK.modo == 'mes' ? 'selected' : ''}>Por mês</option>
+      <option value="campanha" ${RANK.modo == 'campanha' ? 'selected' : ''}>Por campanha</option>
+    </select>
+    ${RANK.modo == 'mes' ? `<input type="month" value="${esc(RANK.mes)}" onchange="setRank('mes',this.value)">` : ''}
+    ${RANK.modo == 'campanha' ? `<select onchange="setRank('campanha',this.value)">${progs.map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == RANK.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('') || '<option value="">Nenhuma campanha</option>'}</select>` : ''}
+    ${scoreRanking().map(s => `<div class="sc"><div class="av">${esc(s.u.nome.slice(0, 2).toUpperCase())}</div><span>${esc(s.u.nome)} <small>${selosIcones(s.u.email)}</small></span><b>${s.pontos}</b></div>`).join('')}`;
+}
+
+function setRank(campo, valor) {
+  RANK[campo] = valor;
+  if (campo == 'modo' && valor == 'campanha' && !RANK.campanha) RANK.campanha = (companyPrograms()[0] || {}).programaideia || '';
+  const el = $('#rankBox');
+  if (el) el.innerHTML = rankingInner();
+}
+
+/* selos e conquistas */
+const CONQUISTAS = [
+  { icone: '🌱', nome: 'Primeira ideia', desc: 'Enviou a primeira ideia', ok: s => s.ideias >= 1 },
+  { icone: '🚀', nome: 'Ideia implantada', desc: 'Teve uma ideia implantada', ok: s => s.implantadas >= 1 },
+  { icone: '💬', nome: '10 comentários', desc: 'Fez 10 comentários em ideias', ok: s => s.comentarios >= 10 }
+];
+function statsUser(email) {
+  const mine = DB.ideias.filter(i => sameEmail(i.emailusuario, email) && i.status != 'rascunho');
+  return {
+    ideias: mine.length,
+    implantadas: mine.filter(i => i.status == 'implantada').length,
+    comentarios: DB.comentarios.filter(c => sameEmail(c.autorcomentario, email)).length
+  };
+}
+function selosIcones(email) {
+  const st = statsUser(email);
+  return CONQUISTAS.filter(c => c.ok(st)).map(c => `<span title="${esc(c.nome)}">${c.icone}</span>`).join('');
+}
+function conquistasHtml(email) {
+  const st = statsUser(email);
+  return `<h3 style="color:var(--g);margin:10px 0 6px">Conquistas</h3>
+    ${CONQUISTAS.map(c => { const ok = c.ok(st); return `<div class="sc" style="${ok ? '' : 'opacity:.4'}"><div class="av">${c.icone}</div><div>${esc(c.nome)}<div class="meta">${esc(c.desc)}${ok ? '' : ' · bloqueada'}</div></div></div>`; }).join('')}<br>`;
+}
+
+/* ideia do mês */
+function ideaDoMes() {
+  if (!ME || !DB.ideias) return null;
+  const el = companyIdeas().filter(i => !i.privada && !['rascunho', 'reprovada'].includes(i.status) && mesDe(i));
+  if (!el.length) return null;
+  const mes = el.map(mesDe).sort().pop();
+  const pts = i => ideaLikes(i).length + ideaComments(i).length * 2;
+  const top = el.filter(i => mesDe(i) == mes).sort((a, b) => pts(b) - pts(a) || parseDate(b.data) - parseDate(a.data))[0];
+  return { i: top, mes };
+}
+function slideIdeiaHtml(d) {
+  const i = d.i, desc = String(i.descricao || '');
+  return `<div class="sl ideia on"><div>
+    <small>🏆 IDEIA DO MÊS · ${esc(nomeMes(d.mes).toUpperCase())}</small>
+    <h2>${esc(i.titulo)}</h2>
+    <p>${esc(desc.slice(0, 160))}${desc.length > 160 ? '…' : ''}</p>
+    <div class="meta">Por ${esc(getUser(i.emailusuario).nome)} · 👍 ${ideaLikes(i).length} · 💬 ${ideaComments(i).length}</div>
+  </div></div>`;
 }
 
 const loadBanner = () => {
@@ -1535,36 +1766,78 @@ const loadBanner = () => {
 
 const carouselImgs = () => EMPRESA && EMPRESA.img ? [...CAROUSEL_IMGS, EMPRESA.img] : CAROUSEL_IMGS;
 function slideText(k) {
+  if (ideaDoMes()) {
+    if (k == 0) return 'Reconhecimento à ideia que mais mobilizou o time.';
+    k -= 1;
+  }
   if (EMPRESA && EMPRESA.img && k == CAROUSEL_IMGS.length) return EMPRESA.descricaoBanner || QUOTES[k % QUOTES.length];
   return QUOTES[k % QUOTES.length];
 }
 
+/* feed: busca por texto e tags */
+const BUSCA = { q: '', tag: '' };
+const feedBase = () => byNewest(companyIdeas().filter(i => !i.privada && !['implantada', 'rascunho'].includes(i.status)));
+function feedIdeas() {
+  const q = semAcento(BUSCA.q).trim();
+  return feedBase().filter(i => {
+    if (BUSCA.tag && !(i.tags || []).includes(BUSCA.tag)) return false;
+    if (!q) return true;
+    const alvo = semAcento([i.titulo, i.descricao, i.beneficio, i.programaideia, getUser(i.emailusuario).nome, (i.tags || []).join(' ')].join(' '));
+    return q.split(/\s+/).every(w => alvo.includes(w));
+  });
+}
+function feedListHtml() {
+  const feed = feedIdeas();
+  const vazio = BUSCA.q || BUSCA.tag ? 'Nenhuma ideia encontrada para a busca.' : 'Nenhuma ideia ainda. Crie a primeira!';
+  return `${feed.slice(0, visible).map(i => ideaCard(i)).join('') || `<div class="box">${vazio}</div>`}
+    ${feed.length > visible ? `<div style="text-align:center"><button class="btn o" onclick="visible+=PAGE_SIZE;atualizaFeed()">Ver mais</button></div>` : ''}`;
+}
+function tagChipsHtml() {
+  const cont = {};
+  feedBase().forEach(i => (i.tags || []).forEach(t => { cont[t] = (cont[t] || 0) + 1; }));
+  const tags = Object.entries(cont).sort((a, b) => b[1] - a[1]).slice(0, 14);
+  return tags.map(([t, n]) => `<span class="tag${BUSCA.tag == t ? ' on' : ''}" data-t="${esc(t)}" onclick="setTag(this.dataset.t)">#${esc(t)} (${n})</span>`).join('');
+}
+function atualizaFeed() {
+  const el = $('#feedLista'); if (el) el.innerHTML = feedListHtml();
+  const c = $('#tagChips'); if (c) c.innerHTML = tagChipsHtml();
+}
+function setBusca(v) { BUSCA.q = v; visible = PAGE_SIZE; atualizaFeed(); }
+function setTag(t) {
+  BUSCA.tag = BUSCA.tag == t ? '' : t;
+  visible = PAGE_SIZE;
+  if (VIEW == 'home') atualizaFeed(); else go('home');
+}
+
 function viewHome() {
-  const feed = byNewest(companyIdeas().filter(i => !i.privada && !['implantada', 'rascunho'].includes(i.status)));
+  const dm = ideaDoMes();
+  const imgs = carouselImgs();
+  const total = imgs.length + (dm ? 1 : 0);
   return `
   <div class="wrap">
     <div>
       <div class="car">
-        ${carouselImgs().map((s, k) => `<img src="${esc(s)}" class="${k ? '' : 'on'}${k >= CAROUSEL_IMGS.length ? ' logo' : ''}">`).join('')}
+        ${dm ? slideIdeiaHtml(dm) : ''}
+        ${imgs.map((s, k) => `<img src="${esc(s)}" class="${k || dm ? '' : 'on'}${k >= CAROUSEL_IMGS.length ? ' logo' : ''}">`).join('')}
         <button style="left:10px" onclick="moveCarousel(-1)"><span>‹</span></button>
         <button style="right:10px" onclick="moveCarousel(1)"><span>›</span></button>
-        <div class="dots">${carouselImgs().map((_, k) => `<i onclick="moveCarousel(0,${k})"></i>`).join('')}</div>
+        <div class="dots">${Array.from({ length: total }, (_, k) => `<i onclick="moveCarousel(0,${k})"></i>`).join('')}</div>
       </div>
       <p class="quote" id="qt">${QUOTES[0]}</p>
       ${loadBanner()}
-      ${feed.slice(0, visible).map(i => ideaCard(i)).join('') || '<div class="box">Nenhuma ideia ainda. Crie a primeira!</div>'}
-      ${feed.length > visible ? `<div style="text-align:center"><button class="btn o" onclick="visible+=PAGE_SIZE;render()">Ver mais</button></div>` : ''}
+      <div class="box">
+        <input id="busca" type="search" autocomplete="off" placeholder="🔍 Buscar ideias por texto, autor, campanha ou tag..." value="${esc(BUSCA.q)}" oninput="setBusca(this.value)" style="margin-bottom:6px">
+        <div id="tagChips">${tagChipsHtml()}</div>
+      </div>
+      <div id="feedLista">${feedListHtml()}</div>
     </div>
-    <aside><div class="box">
-      <h3 style="color:var(--g)">Score geral</h3>
-      ${scoreRanking().map(s => `<div class="sc"><div class="av">${esc(s.u.nome.slice(0, 2).toUpperCase())}</div><span>${esc(s.u.nome)}</span><b>${s.pontos}</b></div>`).join('')}
-    </div></aside>
+    <aside><div class="box" id="rankBox">${rankingInner()}</div></aside>
   </div>`;
 }
 
 function moveCarousel(step, to) {
   clearInterval(carousel.timer);
-  const imgs = [...document.querySelectorAll('.car img')];
+  const imgs = [...document.querySelectorAll('.car > img, .car > .sl')];
   if (!imgs.length) return;
   carousel.index = to != null ? to : (carousel.index + step + imgs.length) % imgs.length;
   imgs.forEach((x, k) => x.classList.toggle('on', k == carousel.index));
@@ -1575,7 +1848,7 @@ function moveCarousel(step, to) {
 function startCarousel() { carousel.index = 0; moveCarousel(0, 0); }
 
 function viewMyIdeas() {
-  const list = byNewest(companyIdeas().filter(i => i.emailusuario == ME.email));
+  const list = byNewest(companyIdeas().filter(i => i.emailusuario == ME.email || (i.coautores || []).some(e => sameEmail(e, ME.email))));
   return `<div class="wrap one"><div><h2>Minhas ideias</h2><br>${loadBanner()}
     ${list.map(i => ideaCard(i, true)).join('') || '<div class="box">Você ainda não criou ideias.</div>'}</div></div>`;
 }
@@ -1599,8 +1872,7 @@ function filtraTodas(ignoraStatus) {
   });
 }
 
-function indicadorHtml() {
-  const base = filtraTodas(true);
+function indicadorHtml(base = filtraTodas(true)) {
   const impl = base.filter(i => i.status == 'implantada').length;
   const repr = base.filter(i => i.status == 'reprovada').length;
   const total = impl + repr;
@@ -1665,26 +1937,85 @@ function viewAllIdeas() {
             ${STATUS.filter(x => x != 'rascunho').map(x => `<option value="${esc(x)}" ${x == f.status ? 'selected' : ''}>${esc(x)}</option>`).join('')}
           </select></div>
         <div><button class="btn r" style="width:100%" onclick="limparFiltroTodas()">Limpar filtros</button></div>
+        <div><button class="btn" style="width:100%" onclick="exportarCsv()">⬇ Exportar CSV</button></div>
       </div>
       <div id="todasLista">${listaTodasHtml()}</div>
     </div>
   </div>`;
 }
 
+let ANEXOS_TMP = [];
+const ANEXO_MAX = 3, ANEXO_KB = 300;
+const campanhaEncerrada = p => !!p.fim && p.fim < todayIso();
+const campanhasAbertas = atual => companyPrograms().filter(p => !campanhaEncerrada(p) || p.programaideia == atual);
+
+const anexosFormHtml = () => ANEXOS_TMP.map((a, k) => `<div class="meta" style="display:flex;gap:8px;align-items:center">📎 ${esc(a.nome)} <button class="btn s r" type="button" onclick="rmAnexo(${k})">✕</button></div>`).join('');
+function rmAnexo(k) { ANEXOS_TMP.splice(k, 1); const el = $('#fanl'); if (el) el.innerHTML = anexosFormHtml(); }
+function lerAnexos(input) {
+  const files = [...input.files]; input.value = '';
+  files.forEach(f => {
+    if (ANEXOS_TMP.length >= ANEXO_MAX) return showToast(`Máximo de ${ANEXO_MAX} anexos por ideia.`, 'warning');
+    if (f.size > ANEXO_KB * 1024) return showToast(`"${f.name}" passa de ${ANEXO_KB} KB.`, 'warning');
+    const r = new FileReader();
+    r.onload = () => {
+      if (ANEXOS_TMP.length >= ANEXO_MAX) return;
+      ANEXOS_TMP.push({ nome: f.name, tipo: f.type || 'application/octet-stream', dados: r.result });
+      const el = $('#fanl'); if (el) el.innerHTML = anexosFormHtml();
+    };
+    r.readAsDataURL(f);
+  });
+}
+
+/* sugestão de ideias parecidas */
+function ideiasSimilares(titulo, idAtual) {
+  const stop = new Set(['para', 'com', 'uma', 'das', 'dos', 'que', 'por', 'mais', 'como', 'sem', 'nas', 'nos', 'pelo', 'pela', 'ser', 'sua', 'seu']);
+  const toks = t => new Set(semAcento(t).replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stop.has(w)).map(w => w.slice(0, 5)));
+  const a = toks(titulo), tNorm = semAcento(titulo).trim();
+  if (!a.size || tNorm.length < 3) return [];
+  return companyIdeas()
+    .filter(i => i.id != idAtual && (!i.privada || sameEmail(i.emailusuario, ME.email)) && (i.status != 'rascunho' || sameEmail(i.emailusuario, ME.email)))
+    .map(i => {
+      const b = toks(i.titulo);
+      const inter = [...a].filter(w => b.has(w)).length, uni = new Set([...a, ...b]).size;
+      return { i, score: uni ? inter / uni : 0, sub: tNorm.length >= 4 && semAcento(i.titulo).includes(tNorm) };
+    })
+    .filter(x => x.score >= 0.34 || x.sub)
+    .sort((x, y) => y.score - x.score).slice(0, 4).map(x => x.i);
+}
+function showSimilar(idAtual) {
+  const el = $('#fdup'); if (!el) return;
+  const lista = ideiasSimilares($('#f1').value, idAtual);
+  el.innerHTML = lista.length ? `<div class="dup"><b>⚠ Ideias parecidas já cadastradas:</b>
+    ${lista.map(i => `<div>• ${esc(i.titulo)} <small>(${esc(i.status)} · ${esc(getUser(i.emailusuario).nome)})</small></div>`).join('')}</div>` : '';
+}
+
 function openIdeaForm(id) {
   const i = DB.ideias.find(x => x.id == id) || {};
   const aprovadores = companyUsers().filter(u => u.perfil == 'aprovador');
+  const dono = i.emailusuario || ME.email;
+  const selCo = e => (i.coautores || []).some(x => sameEmail(x, e));
+  const colegas = companyUsers().filter(u => !sameEmail(u.email, dono) && (u.ativo || selCo(u.email)));
+  ANEXOS_TMP = [...(i.anexos || [])];
   openModal(`
     <h3>${id ? 'Ajustar' : 'Nova'} ideia</h3><br>
-    <label>Título</label><input id="f1" value="${esc(i.titulo)}">
+    <label>Título</label><input id="f1" value="${esc(i.titulo)}" autocomplete="off" oninput="showSimilar(${id || 0})">
+    <div id="fdup"></div>
     <label>Descrição</label><textarea id="f2" rows="4">${esc(i.descricao)}</textarea>
     <label>Campanha</label>
-    <select id="f3" onchange="showCriterio()"><option value="">Selecione...</option>${companyPrograms().map(p => `<option ${p.programaideia == i.programaideia ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}</select>
+    <select id="f3" onchange="showCriterio()"><option value="">Selecione...</option>${campanhasAbertas(i.programaideia).map(p => `<option ${p.programaideia == i.programaideia ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}</select>
     <div id="f3w" style="display:none"><label>Critério da campanha</label><textarea id="f3c" rows="2" readonly></textarea></div>
     <label>Benefício</label><input id="f4" value="${esc(i.beneficio)}">
     <label>Usuário aprovador (obrigatório)</label>
     <select id="f5"><option value="">Selecione...</option>
       ${aprovadores.map(u => `<option value="${u.email}" ${u.email == i.emailaprovador ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>
+    <label>Tags (separe por vírgula)</label><input id="f7" value="${esc((i.tags || []).join(', '))}" placeholder="ex.: processo, economia, segurança">
+    <label>Coautores</label>
+    <div id="fco" style="max-height:130px;overflow:auto;margin-bottom:10px">
+      ${colegas.map(u => `<label style="display:flex;align-items:center;color:var(--fg)"><input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${selCo(u.email) ? 'checked' : ''}>${esc(u.nome)}</label>`).join('') || '<small>Nenhum colega disponível.</small>'}
+    </div>
+    <label>Anexos (imagem ou arquivo · até ${ANEXO_MAX} · ${ANEXO_KB} KB cada)</label>
+    <input type="file" id="fan" multiple onchange="lerAnexos(this)">
+    <div id="fanl">${anexosFormHtml()}</div>
     <label><input type="checkbox" id="f6" ${i.privada ? 'checked' : ''}>Ideia privada</label>
     <p class="msg" id="fm"></p>
     <button class="btn" onclick="saveIdea(${id || 0},'pendente')">Enviar</button>
@@ -1706,16 +2037,26 @@ async function saveIdea(id, status) {
   const titulo = $('#f1').value.trim(), descricao = $('#f2').value.trim(), aprovador = $('#f5').value;
   if (!titulo || !descricao || !aprovador || !$('#f3').value)
     return $('#fm').textContent = 'Preencha título, descrição, campanha e aprovador.';
-  
+
+  const antiga = DB.ideias.find(x => x.id == id);
+  const prog = companyPrograms().find(p => p.programaideia == $('#f3').value);
+  if (prog && campanhaEncerrada(prog) && (!antiga || antiga.programaideia != prog.programaideia))
+    return $('#fm').textContent = 'Esta campanha já foi encerrada.';
+
   const isNew = !id;
-  const idea = DB.ideias.find(x => x.id == id) ||
-    { id: Date.now(), empresa: ME.empresa, emailusuario: ME.email, data: now(), dataconclusao: '', parecer: '' };
-  
+  const idea = antiga ||
+    { id: Date.now(), empresa: ME.empresa, emailusuario: ME.email, data: now(), dataconclusao: '', parecer: '', historico: [] };
+  const statusAntigo = idea.status;
+  const tags = [...new Set(toList($('#f7').value).map(t => t.toLowerCase().replace(/^#/, '')).filter(Boolean))].slice(0, 8);
+  const coautores = [...document.querySelectorAll('#fco input:checked')].map(x => x.value);
+
   Object.assign(idea, { titulo, descricao, programaideia: $('#f3').value, beneficio: $('#f4').value,
-    emailaprovador: aprovador, privada: $('#f6').checked, status });
-  
+    emailaprovador: aprovador, privada: $('#f6').checked, status, tags, coautores, anexos: [...ANEXOS_TMP] });
+  if (!Array.isArray(idea.historico)) idea.historico = [];
+  if (statusAntigo !== status) addHist(idea, statusAntigo || '', status, '');
+
   if (isNew) DB.ideias.push(idea);
-  
+
   if (status === 'pendente') {
     pushNotification({
       tipo: 'ideia_enviada',
@@ -1726,6 +2067,7 @@ async function saveIdea(id, status) {
     });
   }
 
+  ANEXOS_TMP = [];
   save('ideias'); closeM(); render();
   showToast(isNew ? 'Ideia salva com sucesso!' : 'Ideia atualizada com sucesso!');
 }
@@ -1750,6 +2092,7 @@ async function saveEval(id) {
   if (['implantada', 'reprovada'].includes(i.status)) i.dataconclusao = now();
 
   if (statusAntigo !== i.status || parecerAntigo !== i.parecer) {
+    addHist(i, statusAntigo, i.status, i.parecer);
     pushNotification({
       tipo: 'ideia_atualizada',
       destinoEmail: i.emailusuario,
@@ -1760,7 +2103,119 @@ async function saveEval(id) {
   }
 
   save('ideias'); closeM(); render();
-  showToast('Avaliação/Status atualizados!');
+  showToast(i.status == 'em implantação' && statusAntigo != i.status
+    ? 'Status atualizado! Use "Criar card" na ideia para levá-la a um board.' : 'Avaliação/Status atualizados!');
+}
+
+/* ---- ideia vira card ---- */
+function openIdeaToCard(id) {
+  const i = DB.ideias.find(x => x.id == id);
+  if (!i || !isApprover()) return;
+  const boards = visibleBoards();
+  if (!boards.length) return showToast('Você não participa de nenhum board. Crie um em "Aplicação".', 'warning');
+  openModal(`
+    <h3>Criar card a partir da ideia</h3><br>
+    <label>Board</label>
+    <select id="ic1">${boards.map(b => `<option value="${esc(boardKey(b))}">${esc(b.board)}</option>`).join('')}</select>
+    <label>Título do card</label><input id="ic2" value="${esc(i.titulo)}">
+    <label>Descrição</label><textarea id="ic3" rows="4">${esc(i.descricao)}</textarea>
+    <label>Prazo (opcional)</label><input id="ic4" type="date">
+    <p class="msg" id="icm"></p>
+    <button class="btn" onclick="createCardFromIdea(${id})">Criar card</button>
+    <button class="btn r" onclick="closeM()">Cancelar</button>`);
+}
+
+function createCardFromIdea(id) {
+  const i = DB.ideias.find(x => x.id == id);
+  const b = DB.cards.find(x => isBoard(x) && boardKey(x) == $('#ic1').value);
+  const nome = $('#ic2').value.trim();
+  if (!i || !b) return;
+  if (!nome) return $('#icm').textContent = 'Informe o título do card.';
+  const avaliador = b.usuarios.some(m => sameEmail(m.email, i.emailaprovador)) ? i.emailaprovador : ME.email;
+  const c = { id: Date.now(), empresa: ME.empresa, data: now(), cardnome: nome, descricao: $('#ic3').value.trim(),
+    emailautor: ME.email, emailavaliador: avaliador, status: LANES[0], prioridade: 2, prazo: $('#ic4').value, idideia: i.id };
+  b.aplicacaocard.push(c);
+  i.idcard = { key: boardKey(b), board: b.board, idcard: c.id };
+  if (!sameEmail(avaliador, ME.email))
+    pushNotification({ tipo: 'avaliador_card', destinoEmail: avaliador, titulo: 'Você é avaliador de um card',
+      mensagem: `${ME.nome} criou o card "${c.cardnome}" no board "${b.board}" e definiu você como avaliador.` });
+  save('cards', 'ideias'); closeM(); render();
+  showToast(`Card criado no board "${b.board}"!`);
+}
+
+/* ---- indicadores (aprovadores) e exportação ---- */
+function tempoAvaliacaoDias(i) {
+  if (!STATUS_FIM.includes(i.status)) return null;
+  const hs = i.historico || [];
+  const hIni = hs.find(x => x.para == 'pendente'), hFim = hs.find(x => STATUS_FIM.includes(x.para));
+  const ini = parseDate(hIni ? hIni.data : i.data);
+  const fim = hFim ? parseDate(hFim.data) : (i.dataconclusao ? parseDate(i.dataconclusao) : null);
+  if (!fim || isNaN(ini) || isNaN(fim)) return null;
+  return Math.max(0, (fim - ini) / 86400000);
+}
+
+const barrasHtml = rows => {
+  const max = Math.max(1, ...rows.map(r => r.v));
+  return rows.map(r => `<div class="brow"><span class="bl" title="${esc(r.l)}">${esc(r.l)}</span><div class="bt"><div style="width:${r.v * 100 / max}%"></div></div><b>${r.v}</b></div>`).join('');
+};
+
+function viewIndicadores() {
+  if (!isApprover()) return '<div class="wrap one"><div class="box">Acesso restrito a aprovadores.</div></div>';
+  const base = ideiasBaseTodas().filter(i => i.status != 'rascunho');
+  const aprov = base.filter(i => ['em implantação', 'implantada'].includes(i.status)).length;
+  const repr = base.filter(i => i.status == 'reprovada').length;
+  const taxa = aprov + repr ? Math.round(aprov * 100 / (aprov + repr)) : null;
+  const tempos = base.map(tempoAvaliacaoDias).filter(x => x != null);
+  const medio = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : null;
+  const emAvaliacao = base.filter(i => STATUS_AVALIACAO.includes(i.status));
+  const atrasadas = emAvaliacao.filter(ideaAtrasada).length;
+
+  const hoje = new Date(), meses = [];
+  for (let k = 11; k >= 0; k--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1);
+    meses.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`);
+  }
+  const porMes = meses.map(m => ({ l: rotuloMes(m), v: base.filter(i => mesDe(i) == m).length }));
+  const camp = {};
+  base.forEach(i => { const c = i.programaideia || '(sem campanha)'; camp[c] = (camp[c] || 0) + 1; });
+  const topCamp = Object.entries(camp).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([l, v]) => ({ l, v }));
+
+  return `
+  <div class="wrap one"><div>
+    <h2>Indicadores</h2><br>
+    <div class="feats">
+      <div class="box"><div class="kpi">${base.length}</div><p class="meta">ideias enviadas</p></div>
+      <div class="box"><div class="kpi">${taxa == null ? '-' : taxa + '%'}</div><p class="meta">taxa de aprovação (em implantação + implantadas ÷ decididas)</p></div>
+      <div class="box"><div class="kpi">${medio == null ? '-' : medio.toFixed(1).replace('.', ',') + ' d'}</div><p class="meta">tempo médio de avaliação</p></div>
+      <div class="box ${atrasadas ? 'late' : ''}"><div class="kpi" style="${atrasadas ? 'color:#ff6b6b' : ''}">${atrasadas}</div><p class="meta">ideias atrasadas na avaliação (de ${emAvaliacao.length} em avaliação · prazo ${PRAZO_AVALIACAO_DIAS} dias)</p></div>
+    </div>
+    <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Ideias por mês</h3>${barrasHtml(porMes)}</div>
+    <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Campanhas mais ativas</h3>${topCamp.length ? barrasHtml(topCamp) : '<p class="meta">Sem dados.</p>'}</div>
+    <div class="box">${indicadorHtml(base)}</div>
+  </div></div>`;
+}
+
+function exportarCsv() {
+  const list = byNewest(filtraTodas(false));
+  if (!list.length) return showToast('Nenhuma ideia para exportar com os filtros atuais.', 'warning');
+  const cols = [
+    ['ID', i => i.id], ['Título', i => i.titulo], ['Descrição', i => i.descricao],
+    ['Autor', i => getUser(i.emailusuario).nome], ['E-mail do autor', i => i.emailusuario],
+    ['Coautores', i => (i.coautores || []).map(e => getUser(e).nome).join(', ')],
+    ['Campanha', i => i.programaideia], ['Benefício', i => i.beneficio], ['Tags', i => (i.tags || []).join(', ')],
+    ['Aprovador', i => getUser(i.emailaprovador).nome], ['Status', i => i.status],
+    ['Data', i => i.data], ['Conclusão', i => i.dataconclusao], ['Parecer', i => i.parecer],
+    ['Curtidas', i => ideaLikes(i).length], ['Comentários', i => ideaComments(i).length],
+    ['Privada', i => i.privada ? 'Sim' : 'Não']
+  ];
+  const cel = v => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
+  const csv = '\ufeff' + [cols.map(c => cel(c[0])).join(';'), ...list.map(i => cols.map(c => cel(c[1](i))).join(';'))].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `ideias_${todayIso()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast(`${list.length} ideia(s) exportada(s).`);
 }
 
 /* ============================= 8. PERFIL ================================ */
@@ -1771,6 +2226,7 @@ function viewProfile() {
     <label>Nome completo</label><input readonly value="${esc(ME.nome)}">
     <label>E-mail</label><input readonly value="${esc(ME.email)}">
     <label>Data de nascimento</label><input readonly value="${esc(formatDate(ME.datanascimento || ME.nascimento || ''))}">
+    ${conquistasHtml(ME.email)}
     <!-- <h3 style="color:var(--g)">Alterar senha</h3><br> -->
     <!-- <label>Senha atual</label><input type="password" id="p1"> -->
     <!-- <label>Nova senha</label><input type="password" id="p2"> -->
@@ -1859,9 +2315,10 @@ function viewPrograms() {
     <button class="btn" onclick="openProgramForm('')">＋ Nova campanha</button><br><br>
     ${companyPrograms().map(p => `
       <div class="box idea">
-        <h3>${esc(p.programaideia)}</h3>
+        <h3>${esc(p.programaideia)}${campanhaEncerrada(p) ? ' <span class="badge s-reprovada">Encerrada</span>' : ''}</h3>
         <p>${esc(p.descricao)}</p>
-        ${p.criterio ? `<p class="meta">Critério: ${esc(p.criterio)}</p>` : ''}<br>
+        ${p.criterio ? `<p class="meta">Critério: ${esc(p.criterio)}</p>` : ''}
+        ${p.inicio || p.fim ? `<p class="meta">Período: ${p.inicio ? fmtIso(p.inicio) : '—'} a ${p.fim ? fmtIso(p.fim) : '—'}</p>` : ''}<br>
         <button class="btn s o" onclick="openProgramForm('${esc(p.programaideia)}')">Editar</button>
         <button class="btn s r" onclick="deleteProgram('${esc(p.programaideia)}')">Excluir</button>
       </div>`).join('') || '<div class="box">Nenhuma campanha cadastrada.</div>'}
@@ -1878,6 +2335,11 @@ function openProgramForm(nome = '') {
     <textarea id="g2" rows="4" placeholder="Digite a descrição">${esc(p.descricao || '')}</textarea>
     <label>Critério</label>
     <textarea id="g3" rows="2" placeholder="Digite o critério da campanha">${esc(p.criterio || '')}</textarea>
+    <div class="filtros">
+      <div><label>Início</label><input id="g4" type="date" value="${esc(p.inicio || '')}"></div>
+      <div><label>Fim</label><input id="g5" type="date" value="${esc(p.fim || '')}"></div>
+    </div>
+    <p class="meta">Campanhas encerradas deixam de aparecer ao criar uma nova ideia.</p>
     <p class="msg" id="gm"></p>
     <button class="btn" onclick="saveProgram('${esc(nome)}')">Salvar</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
@@ -1887,7 +2349,9 @@ function saveProgram(antigo) {
   const titulo = $('#g1').value.trim();
   const descricao = $('#g2').value.trim();
   const criterio = $('#g3').value.trim();
+  const inicio = $('#g4').value, fim = $('#g5').value;
   if (!titulo) return $('#gm').textContent = 'O título é obrigatório.';
+  if (inicio && fim && fim < inicio) return $('#gm').textContent = 'O fim não pode ser anterior ao início.';
 
   const p = companyPrograms().find(x => x.programaideia == antigo);
   if (p) {
@@ -1895,7 +2359,7 @@ function saveProgram(antigo) {
       companyIdeas().filter(i => i.programaideia == antigo).forEach(i => i.programaideia = titulo);
       save('ideias');
     }
-    Object.assign(p, { programaideia: titulo, descricao, criterio });
+    Object.assign(p, { programaideia: titulo, descricao, criterio, inicio, fim });
     save('programas');
   } else {
     DB.programas.push({
@@ -1903,6 +2367,8 @@ function saveProgram(antigo) {
       empresa: ME.empresa,
       descricao,
       criterio,
+      inicio,
+      fim,
       emailautor: ME.email
     });
     save('programas');
@@ -1980,6 +2446,7 @@ function openBoard(k) {
   const b = DB.cards[k];
   if (!isBoard(b) || !isBoardMember(b)) return;
   BOARD_KEY = boardKey(b);
+  BFILTRO = { resp: '', prio: '', arq: false };
   go('board');
 }
 
@@ -2010,28 +2477,110 @@ function saveBoard() {
   showToast('Board criado!');
 }
 
+let BFILTRO = { resp: '', prio: '', arq: false };
+const canManageBoard = b => sameEmail(b.emailautorcriacao, ME.email) || isAdmin();
+const cardAtrasado = c => !!c.prazo && c.status != 'FINALIZADO' && c.prazo < todayIso();
+
 function viewBoard() {
   const b = currentBoard();
   if (!b) return `<div class="wrap one"><div class="box">Board não encontrado.<br><br><button class="btn" onclick="go('kanban')">Voltar</button></div></div>`;
-  const cards = b.aplicacaocard;
+  const f = BFILTRO;
+  const cards = b.aplicacaocard.filter(c =>
+    (!f.resp || sameEmail(c.emailautor, f.resp) || sameEmail(c.emailavaliador, f.resp)) &&
+    (!f.prio || c.prioridade == f.prio) && (f.arq || !c.arquivado));
+  const nArq = b.aplicacaocard.filter(c => c.arquivado).length;
   return `
   <div style="padding:16px">
     <button class="btn s o" onclick="go('kanban')">← Boards</button><br><br>
     <h2>${esc(b.board)}</h2><br>
-    <button class="btn" onclick="openCardForm()">＋ Novo card</button><br><br>
+    <button class="btn" onclick="openCardForm()">＋ Novo card</button>
+    ${canManageBoard(b) ? `<button class="btn o" onclick="openBoardEdit()">✏️ Editar board</button>` : ''}<br><br>
+    <div class="box filtros">
+      <div><label>Responsável (autor ou avaliador)</label>
+        <select onchange="BFILTRO.resp=this.value;render()"><option value="">Todos</option>
+          ${b.usuarios.map(m => `<option value="${esc(m.email)}" ${sameEmail(m.email, f.resp) ? 'selected' : ''}>${esc(getUser(m.email).nome)}</option>`).join('')}</select></div>
+      <div><label>Prioridade</label>
+        <select onchange="BFILTRO.prio=this.value;render()"><option value="">Todas</option>
+          ${[1, 2, 3].map(p => `<option value="${p}" ${f.prio == p ? 'selected' : ''}>${PRIORIDADE[p]}</option>`).join('')}</select></div>
+      <div><label style="display:flex;align-items:center;margin-bottom:12px"><input type="checkbox" ${f.arq ? 'checked' : ''} onchange="BFILTRO.arq=this.checked;render()">Mostrar arquivados (${nArq})</label></div>
+    </div>
     <div class="board">
       ${LANES.map(lane => `
-        <div class="lane" data-lane="${lane}"><h4>${lane}</h4>${laneCards(cards, lane).map(c => `
-            <div class="kc p${c.prioridade}" data-id="${c.id}" onpointerdown="kStart(event, ${c.id})"><span class="kh" title="Arraste para mover">⠿</span><b>${esc(c.cardnome)}</b>
+        <div class="lane" data-lane="${lane}"><h4>${lane}</h4>${laneCards(cards, lane).map(c => {
+          const atras = cardAtrasado(c);
+          return `
+            <div class="kc p${c.prioridade}${atras ? ' late' : ''}${c.arquivado ? ' arq' : ''}" data-id="${c.id}" onpointerdown="kStart(event, ${c.id})"><span class="kh" title="Arraste para mover">⠿</span><b>${esc(c.cardnome)}</b>
               <p class="meta">${esc(c.descricao)}<br>Autor: ${esc(getUser(c.emailautor).nome)}
-                <br>Avaliador: ${esc(getUser(c.emailavaliador).nome)}<br>Prioridade: ${PRIORIDADE[c.prioridade]}</p>
+                <br>Avaliador: ${esc(getUser(c.emailavaliador).nome)}<br>Prioridade: ${PRIORIDADE[c.prioridade]}
+                ${c.prazo ? `<br>Prazo: ${fmtIso(c.prazo)}${atras ? ' <b style="color:#ff6b6b">⚠ atrasado</b>' : ''}` : ''}
+                ${c.arquivado ? '<br>📦 Arquivado' : ''}</p>
               <button class="btn s o" onclick="openCardForm(${c.id})">Editar</button>
               <button class="btn s r" onclick="deleteCard(${c.id})">Excluir</button>
+              ${c.status == 'FINALIZADO' ? `<button class="btn s o" onclick="toggleArquivar(${c.id})">${c.arquivado ? 'Desarquivar' : '📦 Arquivar'}</button>` : ''}
               ${cardComments(c)}
-            </div>`).join('')}
+            </div>`; }).join('')}
         </div>`).join('')}
     </div>
   </div>`;
+}
+
+function toggleArquivar(id) {
+  const b = currentBoard();
+  const c = b && b.aplicacaocard.find(x => x.id == id);
+  if (!c) return;
+  if (c.arquivado) delete c.arquivado; else c.arquivado = true;
+  save('cards'); render();
+  showToast(c.arquivado ? 'Card arquivado.' : 'Card desarquivado.');
+}
+
+function openBoardEdit() {
+  const b = currentBoard();
+  if (!b || !canManageBoard(b)) return;
+  const membro = e => b.usuarios.some(m => sameEmail(m.email, e));
+  openModal(`
+    <h3>Editar board</h3><br>
+    <label>Nome do board</label><input id="be1" value="${esc(b.board)}">
+    <label>Usuários com acesso</label>
+    <div id="beusers" style="max-height:220px;overflow:auto;margin-bottom:10px">
+      ${companyUsers().filter(u => u.ativo || membro(u.email)).map(u => `
+        <label style="display:flex;align-items:center;color:var(--fg)">
+          <input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${membro(u.email) || sameEmail(u.email, b.emailautorcriacao) || sameEmail(u.email, ME.email) ? 'checked' : ''} ${sameEmail(u.email, b.emailautorcriacao) || sameEmail(u.email, ME.email) ? 'disabled' : ''}>${esc(u.nome)}
+        </label>`).join('')}
+    </div>
+    <p class="msg" id="bem"></p>
+    <button class="btn" onclick="saveBoardEdit()">Salvar</button>
+    <button class="btn r" onclick="closeM()">Cancelar</button>
+    <button class="btn r" style="float:right" onclick="deleteBoard()">🗑 Excluir board</button>`);
+}
+
+function saveBoardEdit() {
+  const b = currentBoard();
+  if (!b || !canManageBoard(b)) return;
+  const nome = $('#be1').value.trim();
+  if (!nome) return $('#bem').textContent = 'Informe o nome do board.';
+  const users = [...document.querySelectorAll('#beusers input:checked')].map(x => x.value);
+  b.board = nome;
+  b.usuarios = users.map(email => ({ email }));
+  BOARD_KEY = boardKey(b);
+  save('cards'); closeM(); render();
+  showToast('Board atualizado!');
+}
+
+function deleteBoard() {
+  const b = currentBoard();
+  if (!b || !canManageBoard(b)) return;
+  const key = boardKey(b);
+  showConfirm(`Excluir o board "${b.board}" e todos os seus ${b.aplicacaocard.length} card(s)? Esta ação não pode ser desfeita.`, () => {
+    const at = DB.cards.findIndex(x => isBoard(x) && boardKey(x) == key);
+    if (at < 0) return;
+    const ids = new Set(DB.cards[at].aplicacaocard.map(c => String(c.id)));
+    DB.cards.splice(at, 1);
+    DB.comentarioscard = DB.comentarioscard.filter(x => !ids.has(String(x.idcardaplicacao)));
+    BOARD_KEY = '';
+    save('cards', 'comentarioscard');
+    go('kanban');
+    showToast('Board excluído!');
+  });
 }
 
 const laneCards = (cards, lane) => cards.filter(c => c.status == lane)
@@ -2117,6 +2666,7 @@ function moveCard(id, lane, beforeId) {
   dest.splice(at < 0 ? dest.length : at, 0, c);
   if (c.status != lane) c.dataconclusao = lane == 'FINALIZADO' ? now() : '';
   c.status = lane;
+  if (lane != 'FINALIZADO') delete c.arquivado;
   dest.forEach((x, k) => { x.ordem = k + 1; });
   save('cards');
   render();
@@ -2136,6 +2686,7 @@ function openCardForm(id) {
     <label>Status</label><select id="k5">${optionList(LANES, c.status)}</select>
     <label>Prioridade</label>
     <select id="k6">${[1, 2, 3].map(p => `<option value="${p}" ${p == c.prioridade ? 'selected' : ''}>${p} -${PRIORIDADE[p]}</option>`).join('')}</select>
+    <label>Prazo</label><input id="k7" type="date" value="${esc(c.prazo || '')}">
     <button class="btn" onclick="saveCard(${id || 0})">Salvar</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
 }
@@ -2144,11 +2695,15 @@ function saveCard(id) {
   const b = currentBoard();
   if (!b) return;
   const c = b.aplicacaocard.find(x => x.id == id) || { id: Date.now(), empresa: ME.empresa, data: now() };
+  const avaliadorAntigo = c.emailavaliador || '';
   if (c.status && c.status != $('#k5').value) delete c.ordem;
   Object.assign(c, { cardnome: $('#k1').value, descricao: $('#k2').value, emailautor: $('#k3').value,
-    emailavaliador: $('#k4').value, status: $('#k5').value, prioridade: +$('#k6').value });
-  if (c.status == 'FINALIZADO') c.dataconclusao = now();
+    emailavaliador: $('#k4').value, status: $('#k5').value, prioridade: +$('#k6').value, prazo: $('#k7').value });
+  if (c.status == 'FINALIZADO') c.dataconclusao = now(); else delete c.arquivado;
   if (!id) b.aplicacaocard.push(c);
+  if (c.emailavaliador && !sameEmail(c.emailavaliador, avaliadorAntigo) && !sameEmail(c.emailavaliador, ME.email))
+    pushNotification({ tipo: 'avaliador_card', destinoEmail: c.emailavaliador, titulo: 'Você é avaliador de um card',
+      mensagem: `${ME.nome} definiu você como avaliador do card "${c.cardnome}" no board "${b.board}".` });
   save('cards'); closeM(); render();
   showToast('Card salvo!');
 }
@@ -2168,12 +2723,13 @@ function cardComments(c) {
     .sort((a, b) => (parseDate(a.data) - parseDate(b.data)) || 0);
   return `
     <div class="kcm">
-      ${list.map(x => `<div class="cm"><b>${esc(getUser(x.autorcomentario).nome)}</b> <small>${esc(x.data)}</small><br>${esc(x.comentario)}</div>`).join('')}
+      ${list.map(x => `<div class="cm"><b>${esc(getUser(x.autorcomentario).nome)}</b> <small>${esc(x.data)}</small><br>${fmtComent(x.comentario)}</div>`).join('')}
     </div>
     <div class="row" style="margin-top:8px">
-      <input id="kc${c.id}" placeholder="Comentar..." onkeydown="if(event.key=='Enter')addCardComment(${c.id})">
+      <input id="kc${c.id}" placeholder="Comentar... (@ para citar)" autocomplete="off" oninput="mentionSuggest(this)" onkeydown="if(event.key=='Enter')addCardComment(${c.id})">
       <button class="btn s" onclick="addCardComment(${c.id})">Enviar</button>
-    </div>`;
+    </div>
+    <div class="mnt" id="mn_kc${c.id}"></div>`;
 }
 
 function addCardComment(id) {
@@ -2181,6 +2737,19 @@ function addCardComment(id) {
   const texto = el ? el.value.trim() : '';
   if (!texto) return;
   DB.comentarioscard.push({ idcardaplicacao: id, autorcomentario: ME.email, comentario: texto, data: now() });
+
+  const b = currentBoard();
+  const card = b && b.aplicacaocard.find(x => x.id == id);
+  const nome = card ? card.cardnome : '';
+  const mencoes = notifMencoes(texto, `no card "${nome}"`, {});
+  const jaAvisados = mencoes.map(n => n.destinoEmail);
+  const notifs = [...mencoes];
+  if (card) [card.emailautor, card.emailavaliador].filter(Boolean).forEach(e => {
+    if (sameEmail(e, ME.email) || [...jaAvisados, ...notifs.map(n => n.destinoEmail)].some(x => sameEmail(x, e))) return;
+    notifs.push({ tipo: 'comentario_card', destinoEmail: e, titulo: 'Novo comentário no seu card',
+      mensagem: `${ME.nome} comentou no card "${nome}" do board "${b.board}".` });
+  });
+  pushNotifications(notifs);
   save('comentarioscard'); render();
 }
 
@@ -2189,9 +2758,15 @@ let SHOW_DONE_GOALS = false;
 const sameEmail = (a, b) => String(a || '').trim().toLowerCase() == String(b || '').trim().toLowerCase();
 const canSeeGoal = m => sameEmail(m.autor, ME.email) || m.usuarios.some(u => sameEmail(u.email, ME.email));
 
+const ideiasImplantadas = camp => companyIdeas().filter(i => i.programaideia == camp && i.status == 'implantada').length;
+const goalPct = m => m.campanha && m.alvo > 0
+  ? Math.min(100, Math.round(ideiasImplantadas(m.campanha) * 100 / m.alvo))
+  : m.porcentagemConclusao;
+const goalAtrasada = m => goalPct(m) < 100 && !!m.dataPrevisaoConclusao && parseDate(m.dataPrevisaoConclusao) < new Date();
+
 function viewGoals() {
   const lista = DB.metas.map((m, k) => ({ m, k }))
-    .filter(x => canSeeGoal(x.m) && (SHOW_DONE_GOALS || x.m.porcentagemConclusao < 100))
+    .filter(x => canSeeGoal(x.m) && (SHOW_DONE_GOALS || goalPct(x.m) < 100))
     .sort((a, b) => (parseDate(b.m.dataCriacao) - parseDate(a.m.dataCriacao)) || 0);
   return `
   <div class="wrap one"><div>
@@ -2203,17 +2778,19 @@ function viewGoals() {
 }
 
 function goalCard(m, k) {
-  const pct = m.porcentagemConclusao;
+  const pct = goalPct(m), atras = goalAtrasada(m);
   return `
-  <div class="box idea">
-    <h3>${esc(m.meta)} <span class="badge ${pct >= 100 ? 's-implantada' : 's-implantacao'}">${pct}%</span></h3>
+  <div class="box idea${atras ? ' late' : ''}">
+    <h3>${esc(m.meta)} <span class="badge ${pct >= 100 ? 's-implantada' : 's-implantacao'}">${pct}%</span>${atras ? ' <span class="badge late">⏰ Prazo vencido</span>' : ''}</h3>
     <div class="pbar"><div style="width:${pct}%"></div></div>
+    ${m.campanha ? `<div class="meta">🎯 Campanha: ${esc(m.campanha)} · ${ideiasImplantadas(m.campanha)} de ${m.alvo} ideia(s) implantada(s)</div>` : ''}
     <div class="meta">Criada por ${esc(getUser(m.autor).nome)} em ${esc(m.dataCriacao)} · Previsão de conclusão: ${esc(m.dataPrevisaoConclusao)}</div>
     <div class="meta">Usuários: ${m.usuarios.map(u => esc(getUser(u.email).nome)).join(', ') || '-'}</div>
     ${m.submeta.map((x, j) => `
       <label style="display:flex;align-items:center;gap:6px;color:var(--fg);font-size:.95rem;padding:3px 0;cursor:pointer">
         <input type="checkbox" style="margin:0" ${x.concluida ? 'checked' : ''} onchange="toggleSubgoal(${k},${j},this.checked)">
         <span style="${x.concluida ? 'text-decoration:line-through;opacity:.6' : ''}">${esc(x.descricao)}</span>
+        ${x.responsavel ? `<small style="color:var(--mut)">· Responsável: ${esc(getUser(x.responsavel).nome)}</small>` : ''}
       </label>`).join('')}
     ${isApprover() ? `<br><button class="btn s r" onclick="deleteGoal(${k})">Excluir</button>` : ''}
   </div>`;
@@ -2222,10 +2799,17 @@ function goalCard(m, k) {
 function toggleSubgoal(k, j, val) {
   const m = DB.metas[k];
   if (!m || !m.submeta[j] || !canSeeGoal(m)) return;
-  m.submeta[j].concluida = !!val;
+  const sub = m.submeta[j], antes = sub.concluida;
+  sub.concluida = !!val;
+  if (sub.concluida) sub.concluidaPor = ME.email; else delete sub.concluidaPor;
   m.porcentagemConclusao = metaPct(m.submeta);
+  if (sub.concluida && !antes) {
+    const dest = [...new Set([m.autor, sub.responsavel].filter(e => e && !sameEmail(e, ME.email)))];
+    pushNotifications(dest.map(e => ({ tipo: 'submeta_concluida', destinoEmail: e, titulo: 'Submeta concluída',
+      mensagem: `${ME.nome} concluiu a submeta "${sub.descricao}" da meta "${m.meta}".` })));
+  }
   save('metas'); render();
-  if (m.porcentagemConclusao == 100) showToast('Meta concluída!');
+  if (goalPct(m) == 100) showToast('Meta concluída!');
 }
 
 function openGoalForm() {
@@ -2234,7 +2818,13 @@ function openGoalForm() {
     <h3>Nova meta</h3><br>
     <label>Meta</label><input id="m1">
     <label>Previsão de conclusão</label><input id="m2" type="date">
-    <label>Submetas (cadastre ao menos uma)</label>
+    <label>Campanha (opcional): a meta mede as ideias implantadas da campanha</label>
+    <select id="m3" onchange="$('#m4w').style.display=this.value?'':'none'">
+      <option value="">Sem campanha</option>
+      ${companyPrograms().map(p => `<option value="${esc(p.programaideia)}">${esc(p.programaideia)}</option>`).join('')}
+    </select>
+    <div id="m4w" style="display:none"><label>Quantidade de ideias a implantar</label><input id="m4" type="number" min="1" value="5"></div>
+    <label>Submetas (obrigatório ao menos uma, exceto em meta ligada a campanha)</label>
     <div id="msubs"></div>
     <button class="btn s o" onclick="addSubgoalField()">＋ Adicionar submeta</button><br><br>
     <label>Usuários com acesso</label>
@@ -2254,27 +2844,36 @@ function addSubgoalField(focus = true) {
   const row = document.createElement('div');
   row.className = 'row';
   row.style.marginBottom = '8px';
-  row.innerHTML = '<input class="sg" placeholder="Descrição da submeta"><button class="btn s r" type="button" onclick="this.parentNode.remove()">✕</button>';
+  const opts = companyUsers().filter(u => u.ativo).map(u => `<option value="${esc(u.email)}">${esc(u.nome)}</option>`).join('');
+  row.innerHTML = `<input class="sg" placeholder="Descrição da submeta"><select class="sgr" title="Responsável" style="max-width:40%;margin-bottom:0"><option value="">Sem responsável</option>${opts}</select><button class="btn s r" type="button" onclick="this.parentNode.remove()">✕</button>`;
   $('#msubs').appendChild(row);
   if (focus) row.querySelector('input').focus();
 }
 
 function saveGoal() {
   const meta = $('#m1').value.trim(), prev = $('#m2').value;
-  const subs = [...document.querySelectorAll('#msubs .sg')].map(x => x.value.trim()).filter(Boolean);
-  const users = [...document.querySelectorAll('#musers input:checked')].map(x => x.value);
+  const camp = $('#m3').value, alvo = parseInt($('#m4').value, 10) || 0;
+  const subs = [...document.querySelectorAll('#msubs .row')]
+    .map(r => ({ descricao: r.querySelector('.sg').value.trim(), concluida: false, responsavel: r.querySelector('.sgr').value }))
+    .filter(x => x.descricao);
+  const marcados = [...document.querySelectorAll('#musers input:checked')].map(x => x.value);
+  const users = [...new Set([...marcados, ...subs.map(x => x.responsavel).filter(Boolean)])];
   const erro = t => { $('#mm').textContent = t; };
   if (!meta) return erro('Informe a meta.');
   if (!prev) return erro('Informe a previsão de conclusão.');
-  if (!subs.length) return erro('Cadastre ao menos uma submeta.');
+  if (camp && alvo < 1) return erro('Informe quantas ideias devem ser implantadas.');
+  if (!camp && !subs.length) return erro('Cadastre ao menos uma submeta.');
   const [y, mo, d] = prev.split('-');
   DB.metas.push({
     meta,
+    campanha: camp,
+    alvo: camp ? alvo : 0,
     dataPrevisaoConclusao: `${d}-${mo}-${y} 23:59`,
     dataCriacao: now(),
     porcentagemConclusao: 0,
+    avisoVencida: '',
     autor: ME.email,
-    submeta: subs.map(descricao => ({ descricao, concluida: false })),
+    submeta: subs,
     usuarios: users.map(email => ({ email }))
   });
   save('metas'); closeM(); render();
@@ -2299,18 +2898,51 @@ async function refreshNotifs() {
   try { const l = await loadTable('notificacoes'); if (l) DB.notificacoes = l; } catch (e) { }
 }
 
-async function pushNotification(notifObj) {
-  try {
-    const list = (await loadTable('notificacoes')) || [];
-    list.push({
-      id: Date.now(),
-      data: now(),
-      lida: false,
-      ...notifObj
-    });
-    DB.notificacoes = list;
-    await writeTable('notificacoes');
-  } catch (e) { console.warn('Erro ao disparar notificação:', e); }
+let notifQueue = Promise.resolve();
+function pushNotifications(lista) {
+  if (!lista || !lista.length) return Promise.resolve();
+  notifQueue = notifQueue.then(async () => {
+    try {
+      const list = (await loadTable('notificacoes')) || DB.notificacoes || [];
+      const base = Date.now();
+      lista.forEach((n, k) => list.push({ id: base + k, data: now(), lida: false, ...n }));
+      DB.notificacoes = list;
+      await writeTable('notificacoes');
+    } catch (e) { console.warn('Erro ao disparar notificação:', e); }
+  });
+  return notifQueue;
+}
+const pushNotification = notifObj => pushNotifications([notifObj]);
+
+/* lembrete de avaliação atrasada (ao aprovador) e aviso de meta vencida (autor e usuários) */
+function checkPrazos() {
+  if (!ME || !DB.ideias) return;
+  const notifs = [];
+  let mudouI = false, mudouM = false;
+
+  companyIdeas().forEach(i => {
+    if (!sameEmail(i.emailaprovador, ME.email) || !ideaAtrasada(i)) return;
+    if (i.ultimoLembrete && diasDesde(i.ultimoLembrete) < PRAZO_AVALIACAO_DIAS) return;
+    i.ultimoLembrete = now(); mudouI = true;
+    notifs.push({ tipo: 'prazo_avaliacao', destinoEmail: ME.email, titulo: 'Ideia aguardando sua avaliação',
+      mensagem: `A ideia "${i.titulo}" está há ${Math.floor(diasDesde(ultimaMov(i)))} dias sem avaliação (prazo de ${PRAZO_AVALIACAO_DIAS} dias).`, idideia: i.id });
+  });
+
+  DB.metas.forEach(m => {
+    if (!canSeeGoal(m) || !goalAtrasada(m) || m.avisoVencida) return;
+    m.avisoVencida = now(); mudouM = true;
+    const dest = [...new Set([m.autor, ...m.usuarios.map(u => u.email)].map(e => String(e || '').trim()).filter(Boolean))];
+    dest.forEach(e => notifs.push({ tipo: 'meta_vencida', destinoEmail: e, titulo: 'Meta com prazo vencido',
+      mensagem: `A meta "${m.meta}" passou do prazo (${String(m.dataPrevisaoConclusao).slice(0, 10)}) e ainda não foi concluída.` }));
+  });
+
+  if (mudouI) save('ideias');
+  if (mudouM) save('metas');
+  if (notifs.length) {
+    pushNotifications(notifs).then(() => { updateMenuBadge(); if (VIEW == 'notificacoes') render(); });
+    if (notifs.some(n => n.destinoEmail == ME.email))
+      showToast('Você tem novos avisos de prazo nas notificações.', 'warning');
+  }
 }
 
 const userNotifs = () => (DB.notificacoes || []).filter(n => 
