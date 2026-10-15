@@ -585,37 +585,36 @@ header.hc .menu {
 <div id="app"></div>
 <div id="modal"></div>
 <div id="toast-container"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 /* =========================================================================
    INSIGHT - Plataforma de ideias
-   Índice:  1 Config · 2 Utilitários · 3 Dados (Gists) · 4 Textos estáticos
+   Índice:  1 Config · 2 Utilitários · 3 Dados (Firebase) · 4 Textos estáticos
             5 Autenticação · 6 Estrutura do app · 7 Ideias · 8 Perfil
             9 Campanhas · 10 Usuários · 11 Kanban · 12 Notificações · 13 Inicialização
    ========================================================================= */
 
 /* ============================ 1. CONFIG ================================= */
-/* Fixos: usuários (consultado antes do login) e empresas. Os demais ids são lidos da empresa do usuário logado (campo nomeempresa). */
-const GISTS = {
-  usuarios: '9525a941c8117f69ccaa9963d0c0c966',
-  empresas: 'da1e4c92d15573ff57306fb167b00015'//'e049dd6337764d33ae7770678e01a801'
+/* Firebase: login por Firebase Authentication; dados em Realtime Database em /empresas/{empresa}/{tabela}. */
+const firebaseConfig = {
+  apiKey: "AIzaSyBSG5VhSKUbHJ0UMkuBQPDJQhucdgY_ipQ",
+  authDomain: "insight-5189f.firebaseapp.com",
+  databaseURL: "https://insight-5189f-default-rtdb.firebaseio.com",
+  projectId: "insight-5189f",
+  storageBucket: "insight-5189f.firebasestorage.app",
+  messagingSenderId: "858268463882",
+  appId: "1:858268463882:web:5f2b2dd9f0a680a10600f3"
 };
-const TABLES = ['usuarios', 'perfis', 'cards', 'curtidas', 'comentarios', 'ideias', 'empresas',
-  'programas', 'notificacoes', 'metas', 'comentarioscard'];
-let EMPRESA = null;
-const PREFIXO_LEN = 4;
-const GTM = 'QlGGY' + 'jPfBj4Noe3LgkuJLRDohc' + '9Z941iKt';
-const USUARIOS_GIST_ID = '9525a941c8117f69ccaa9963d0c0c966';
-const USUARIOS_GIST_DONO = 'compreaquidevs';
-let GH_TOKEN = '';
-let USUARIOS_BUSCA_ID = '';
-let USUARIOS_RAW = '';
-let LOGIN_PREFIX = '';
+firebase.initializeApp(firebaseConfig);
+const fb = { auth: firebase.auth(), db: firebase.database() };
+/* Tabelas de cada empresa (as regras do banco só deixam o usuário acessar a própria empresa). */
+const TABLES = ['usuarios', 'cards', 'curtidas', 'comentarios', 'ideias', 'programas', 'notificacoes', 'metas', 'comentarioscard'];
+let EMPRESA = null;   /* dados da empresa (info) */
+let EMP_ID = '';      /* chave da empresa no banco, ex.: "insight" */
 
-function limparSegredos() { LOGIN_PREFIX = GH_TOKEN = USUARIOS_BUSCA_ID = USUARIOS_RAW = ''; }
-async function tokenValido() {
-  try { return (await fetch('https://api.github.com/gists/' + USUARIOS_BUSCA_ID, { headers: authHeaders(), cache: 'no-store' })).ok; }
-  catch (e) { return false; }
-}
+function limparSegredos() { EMP_ID = ''; try { fb.auth.signOut(); } catch (e) { } }
 
 const STATUS = ['rascunho', 'pendente', 'em avaliação inicial', 'em avaliação de negócio',
   'aguardando resposta do idealizador', 'em implantação', 'implantada', 'reprovada'];
@@ -720,25 +719,14 @@ const modalEl = () => document.getElementById('modal') ||
 const openModal = html => { const m = modalEl(); m.innerHTML = '<div>' + html + '</div>'; m.classList.add('on'); };
 const closeM = () => { const m = document.getElementById('modal'); if (m) m.classList.remove('on'); };
 
-/* ============================ 3. DADOS (GISTS) ========================== */
+/* ============================ 3. DADOS (FIREBASE) ======================= */
 let DB = {};
-const META = {};
 const dirty = new Set();
 let flushTimer;
 
-const gistId = t => GISTS[t] || '';
-const authHeaders = () => GH_TOKEN ? { Authorization: 'token ' + GH_TOKEN } : {};
-const jsonHeaders = () => ({ ...authHeaders(), 'Content-Type': 'application/json' });
-
-let gistList;
-async function discoverGist(t) {
-  try {
-    gistList = gistList || fetch('https://api.github.com/gists?per_page=100', { headers: authHeaders(), cache: 'no-store' })
-      .then(r => r.ok ? r.json() : []);
-    const g = (await gistList).find(x => x.description == 'INSIGHT ' + t);
-    return g ? g.id : '';
-  } catch (e) { return ''; }
-}
+const tableRef = tb => fb.db.ref('empresas/' + EMP_ID + '/' + tb);
+/* o Realtime Database não aceita "undefined": remove antes de gravar */
+const limpo = v => JSON.parse(JSON.stringify(v === undefined ? null : v));
 
 function seedData() {
   return {
@@ -761,29 +749,22 @@ function toArray(data) {
 
 const LOAD_ERR = {};
 
-async function loadTable(t) {
-  delete LOAD_ERR[t];
-  const id = gistId(t) || (META[t] && META[t].id) || await discoverGist(t);
-  if (!id) return null;
+async function loadTable(tb) {
+  delete LOAD_ERR[tb];
+  if (!EMP_ID) return null;
   try {
-    const r = await fetch('https://api.github.com/gists/' + id, { headers: authHeaders(), cache: 'no-store' });
-    if (!r.ok) { LOAD_ERR[t] = 'o GitHub respondeu ' + r.status; return null; }
-    const g = await r.json();
-    const file = Object.keys(g.files)[0];
-    if (!file) { LOAD_ERR[t] = 'o gist não tem arquivos'; return null; }
-    META[t] = { id, file };
-    let text = g.files[file].content;
-    if (g.files[file].truncated) text = await (await fetch(g.files[file].raw_url, { cache: 'no-store' })).text();
-    let data;
-    try { data = parseLooseJson(text); }
-    catch (e) { LOAD_ERR[t] = 'JSON inválido (' + e.message + ')'; return null; }
-    const lista = toArray(data);
-    if (!lista) LOAD_ERR[t] = 'o conteúdo não é uma lista';
-    return lista;
-  } catch (e) { LOAD_ERR[t] = 'sem conexão com o GitHub'; return null; }
+    const snap = await tableRef(tb).get();
+    if (!snap.exists()) return [];
+    const lista = toArray(snap.val());
+    if (!lista) { LOAD_ERR[tb] = 'o conteúdo não é uma lista'; return null; }
+    return lista.filter(x => x !== null && x !== undefined);
+  } catch (e) {
+    LOAD_ERR[tb] = e && /permission/i.test(e.message || e.code || '') ? 'sem permissão de acesso' : 'sem conexão com o servidor';
+    return null;
+  }
 }
 
-let gistOnline = true;
+let dbOnline = true;
 
 const firstOf = (o, ...ks) => { for (const k of ks) if (o[k] !== undefined && o[k] !== null && o[k] !== '') return o[k]; return ''; };
 const toBool = v => v === true || ['true', 'sim', 'yes', '1'].includes(String(v).trim().toLowerCase());
@@ -897,12 +878,11 @@ function normalizeData() {
 
 async function loadAll() {
   const seed = seedData();
-  const tabelas = TABLES.filter(t => t != 'empresas');
-  const loaded = await Promise.all(tabelas.map(loadTable));
-  gistOnline = loaded.some(x => x !== null);
-  tabelas.forEach((t, k) => { DB[t] = loaded[k] !== null ? loaded[k] : seed[t]; });
-  DB.empresas = DB.empresas || seed.empresas;
-  gistList = null;
+  const loaded = await Promise.all(TABLES.map(loadTable));
+  dbOnline = loaded.some(x => x !== null);
+  TABLES.forEach((tb, k) => { DB[tb] = loaded[k] !== null ? loaded[k] : seed[tb]; });
+  DB.perfis = seed.perfis;
+  DB.empresas = EMPRESA ? [EMPRESA] : seed.empresas;
   normalizeData();
   Object.keys(SYNC).forEach(snapshot);
 }
@@ -910,17 +890,12 @@ async function loadAll() {
 async function loadCompanyData() {
   const falha = 'Não foi possível carregar os dados da empresa. Tente novamente.';
   try {
-    const lista = await loadTable('empresas');
-    if (!lista) return falha;
-    DB.empresas = lista;
-    const nome = String(ME.empresa || '').trim().toLowerCase();
-    const emp = lista.find(e => String((e && e.nomeempresa) || '').trim().toLowerCase() == nome);
-    if (!emp) return 'Empresa do usuário não encontrada. Fale com o administrador.';
-    TABLES.forEach(t => { if (t != 'empresas') GISTS[t] = String(emp[t] || '').trim(); });
-    if (!GISTS.usuarios) GISTS.usuarios = USUARIOS_BUSCA_ID;
-    Object.keys(META).forEach(k => { if (k != 'empresas') delete META[k]; });
-    EMPRESA = emp;
+    if (!EMP_ID) return 'Empresa do usuário não encontrada. Fale com o administrador.';
+    const info = (await fb.db.ref('empresas/' + EMP_ID + '/info').get()).val();
+    if (!info) return 'Empresa do usuário não encontrada. Fale com o administrador.';
+    EMPRESA = info;
     await loadAll();
+    if (!dbOnline) return falha;
     ME = syncUser(ME);
     return '';
   } catch (e) { return falha; }
@@ -953,87 +928,26 @@ async function mergeRemote(t) {
   });
 }
 
-async function fetchRemoteUsers() {
-  const tentativas = [
-    async () => {
-      const r = await fetch('https://api.github.com/gists/' + USUARIOS_BUSCA_ID, { headers: authHeaders(), cache: 'no-store' });
-      if (!r.ok) throw 0;
-      const g = await r.json();
-      const f = g.files[Object.keys(g.files)[0]];
-      return f.truncated ? await (await fetch(f.raw_url, { cache: 'no-store' })).text() : f.content;
-    },
-    async () => {
-      const r = await fetch(USUARIOS_RAW + '?t=' + Date.now(), { cache: 'no-store' });
-      if (!r.ok) throw 0;
-      return await r.text();
-    }
-  ];
-  for (const buscar of tentativas) {
-    try {
-      const lista = parseLooseJson(await buscar());
-      if (Array.isArray(lista)) return lista;
-    } catch (e) { }
-  }
-  return null;
-}
-
-const normalizeUser = u => ({
-  ...u,
-  nome: u.nome || u.nomeusuario || '',
-  email: (u.email || u.emailusuario || '').trim(),
-  senha: u.senha || u.senhausuario || '',
-  perfil: u.perfil || 'usuario_comum',
-  ativo: u.ativo !== false
-});
-
 function save(...tables) {
   tables.forEach(t => dirty.add(t));
   clearTimeout(flushTimer);
   flushTimer = setTimeout(flush, 700);
 }
 
-async function writeTable(t) {
-  if (!META[t]) await (gistId(t) ? resolveFixedGist(t) : createGist(t));
-  if (SYNC[t]) await mergeRemote(t);
-  const r = await fetch('https://api.github.com/gists/' + META[t].id, {
-    method: 'PATCH', headers: jsonHeaders(),
-    body: JSON.stringify({ files: { [META[t].file]: { content: JSON.stringify(DB[t], null, 1) } } })
-  });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  if (SYNC[t]) snapshot(t);
+async function writeTable(tb) {
+  if (SYNC[tb]) await mergeRemote(tb);
+  await tableRef(tb).set(limpo(DB[tb]));
+  if (SYNC[tb]) snapshot(tb);
 }
 
 async function flush() {
-  for (const t of [...dirty]) {
-    try { await writeTable(t); dirty.delete(t); }
-    catch (e) { console.warn('Falha ao gravar o gist "' + t + '":', e); }
-  }
-}
-
-async function resolveFixedGist(t) {
-  const r = await fetch('https://api.github.com/gists/' + gistId(t), { headers: authHeaders(), cache: 'no-store' });
-  if (!r.ok) throw new Error('Não foi possível acessar o gist de "' + t + '" (' + r.status + ').');
-  const file = Object.keys((await r.json()).files)[0];
-  if (!file) throw new Error('O gist de "' + t + '" não tem arquivos.');
-  META[t] = { id: gistId(t), file };
-}
-
-async function createGist(t) {
-  try {
-    const l = await fetch('https://api.github.com/gists?per_page=100', { headers: authHeaders(), cache: 'no-store' });
-    if (l.ok) {
-      const g = (await l.json()).find(x => x.description == 'INSIGHT ' + t);
-      if (g) { META[t] = { id: g.id, file: Object.keys(g.files)[0] }; return; }
+  for (const tb of [...dirty]) {
+    try { await writeTable(tb); dirty.delete(tb); }
+    catch (e) {
+      console.warn('Falha ao gravar "' + tb + '":', e);
+      showToast('Não foi possível salvar as alterações. Verifique a conexão.', 'error');
     }
-  } catch (e) { }
-  const file = t + '.json';
-  const r = await fetch('https://api.github.com/gists', {
-    method: 'POST', headers: jsonHeaders(),
-    body: JSON.stringify({ description: 'INSIGHT ' + t, public: false, files: { [file]: { content: '[]' } } })
-  });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const g = await r.json();
-  META[t] = { id: g.id, file };
+  }
 }
 
 /* Consultas */
@@ -1128,55 +1042,29 @@ function renderCompanyPage() {
 /* ========================== 5. AUTENTICAÇÃO ============================= */
 let ME = null;
 
+/* Só o e-mail fica salvo no navegador. A sessão (e o "lembrar login") é gerenciada pelo Firebase Authentication. */
 const savedLogin = (() => {
   const KEY = 'ins_login';
-  const LEGACY = ['ins_tk', 'ins_db', 'ins_email', 'ins_gid_programas'];
+  const LEGACY = ['ins_tk', 'ins_db', 'ins_email', 'ins_gid_programas', 'ins_sessao'];
   const safe = fn => { try { return fn(); } catch (e) { return null; } };
-  const backends = [
-    { get: () => localStorage.getItem(KEY),
-      set: v => localStorage.setItem(KEY, v),
-      del: () => localStorage.removeItem(KEY) },
-    { get: () => { const m = document.cookie.match(new RegExp('(?:^|; )' + KEY + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : null; },
-      set: v => { document.cookie = KEY + '=' + encodeURIComponent(v) + '; max-age=31536000; path=/; SameSite=Strict'; },
-      del: () => { document.cookie = KEY + '=; max-age=0; path=/'; } }
-  ];
   return {
-    save(email, senha) {
-      const value = JSON.stringify({ email: String(email).trim(), senha: b64(senha) });
-      let ok = false;
-      backends.forEach(b => { safe(() => b.set(value)); if (safe(b.get) === value) ok = true; });
-      return ok;
-    },
+    save(email) { return !!safe(() => { localStorage.setItem(KEY, JSON.stringify({ email: String(email).trim() })); return true; }); },
     load() {
-      for (const b of backends) {
-        const raw = safe(b.get);
-        if (!raw) continue;
-        try {
-          const l = JSON.parse(raw), senha = decodeSenha(l.senha);
-          if (l.email && senha) return { email: l.email, senha };
-        } catch (e) { }
-      }
+      const raw = safe(() => localStorage.getItem(KEY));
+      try { const l = JSON.parse(raw); if (l && l.email) return { email: l.email, senha: '' }; } catch (e) { }
       return null;
     },
-    clear() { backends.forEach(b => safe(b.del)); },
-    purgeLegacy() { LEGACY.forEach(k => safe(() => localStorage.removeItem(k))); }
+    clear() { safe(() => localStorage.removeItem(KEY)); },
+    /* remove restos da versão antiga, que guardava a senha no navegador */
+    purgeLegacy() {
+      LEGACY.forEach(k => { safe(() => localStorage.removeItem(k)); safe(() => sessionStorage.removeItem(k)); });
+      safe(() => { document.cookie = KEY + '=; max-age=0; path=/'; });
+      const raw = safe(() => localStorage.getItem(KEY));
+      try { const l = JSON.parse(raw); if (l && l.senha !== undefined) savedLogin.save(l.email || ''); } catch (e) { }
+    }
   };
 })();
-
-const sessao = (() => {
-  const KEY = 'ins_sessao';
-  return {
-    save(email, senha) { try { sessionStorage.setItem(KEY, JSON.stringify({ email: String(email).trim(), senha: b64(senha) })); } catch (e) { } },
-    load() {
-      try {
-        const l = JSON.parse(sessionStorage.getItem(KEY) || 'null');
-        const senha = l && decodeSenha(l.senha);
-        return l && l.email && senha ? { email: l.email, senha } : null;
-      } catch (e) { return null; }
-    },
-    clear() { try { sessionStorage.removeItem(KEY); } catch (e) { } }
-  };
-})();
+const sessao = { save() { }, load() { return null; }, clear() { } };
 
 function renderLogin() {
   const saved = savedLogin.load() || { email: '', senha: '' };
@@ -1196,81 +1084,31 @@ function renderLogin() {
     </div></div>`;
 }
 
-function decodeSenha(b64txt) {
-  try { return decodeURIComponent(escape(atob(String(b64txt || '').trim()))); }
-  catch (e) { return null; }
+/* Lê o perfil (empresa, perfil, ativo) do usuário autenticado e define a empresa da sessão. */
+async function montarSessao(fbUser) {
+  const perfil = (await fb.db.ref('perfis/' + fbUser.uid).get()).val();
+  if (!perfil || !perfil.empresa) { limparSegredos(); return { erro: 'Usuário sem empresa vinculada. Fale com o administrador.' }; }
+  if (perfil.ativo === false) { limparSegredos(); return { erro: 'Usuário inativo. Fale com o administrador.' }; }
+  EMP_ID = String(perfil.empresa).trim().toLowerCase();
+  return { user: { uid: fbUser.uid, email: perfil.email || fbUser.email, nome: perfil.nome || '', empresa: perfil.empresa, perfil: perfil.perfil || 'usuario_comum', ativo: true } };
 }
 
-function sha256Js(bytes) {
-  const rr = (v, a) => (v >>> a) | (v << (32 - a));
-  const K = [], H = [];
-  for (let n = 2, c = 0; c < 64; n++) {
-    let pr = true;
-    for (let d = 2; d * d <= n; d++) if (n % d == 0) { pr = false; break; }
-    if (!pr) continue;
-    if (c < 8) H[c] = (Math.sqrt(n) % 1) * 4294967296 | 0;
-    K[c++] = (Math.cbrt(n) % 1) * 4294967296 | 0;
-  }
-  const len = bytes.length, total = ((len + 9 + 63) >> 6) << 6;
-  const buf = new Uint8Array(total);
-  buf.set(bytes); buf[len] = 0x80;
-  const dv = new DataView(buf.buffer);
-  dv.setUint32(total - 8, Math.floor(len * 8 / 4294967296));
-  dv.setUint32(total - 4, (len * 8) >>> 0);
-  for (let o = 0; o < total; o += 64) {
-    const w = new Array(64);
-    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
-    for (let i = 16; i < 64; i++) {
-      const s0 = rr(w[i - 15], 7) ^ rr(w[i - 15], 18) ^ (w[i - 15] >>> 3);
-      const s1 = rr(w[i - 2], 17) ^ rr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
-      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
-    }
-    let [a, b, c, d, e, f, g, h] = H;
-    for (let i = 0; i < 64; i++) {
-      const t1 = (h + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;
-      const t2 = ((rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
-      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
-    }
-    [a, b, c, d, e, f, g, h].forEach((v, i) => H[i] = (H[i] + v) | 0);
-  }
-  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+function erroAuth(e) {
+  const c = (e && e.code) || '';
+  if (['auth/invalid-credential', 'auth/user-not-found', 'auth/wrong-password', 'auth/invalid-email'].includes(c)) return 'E-mail ou senha incorretos.';
+  if (c == 'auth/user-disabled') return 'Usuário inativo. Fale com o administrador.';
+  if (c == 'auth/too-many-requests') return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
+  if (c == 'auth/network-request-failed') return 'Sem conexão. Verifique sua internet.';
+  return 'Erro ao realizar o login. Tente novamente.';
 }
 
-async function sha256(txt) {
-  const bytes = new TextEncoder().encode(String(txt));
-  if (window.crypto && crypto.subtle) {
-    try {
-      const h = await crypto.subtle.digest('SHA-256', bytes);
-      return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (e) { }
-  }
-  return sha256Js(bytes);
-}
-
-function aplicarSegredos(p) {
-  LOGIN_PREFIX = p;
-  GH_TOKEN = 'ghp_' + p[0] + GTM + p[1];
-  USUARIOS_BUSCA_ID = USUARIOS_GIST_ID;
-  USUARIOS_RAW = 'https://gist.githubusercontent.com/' + USUARIOS_GIST_DONO + '/' + USUARIOS_GIST_ID + '/raw';
-}
-
-async function passwordMatches(user, typed) {
-  const hash = String(user.senha || '').trim().toLowerCase();
-  const typedHash = (await sha256(typed)).toLowerCase();
-  return hash === typedHash;
-}
-
-async function validarCredenciais(email, senha) {
-  if (senha.length >= PREFIXO_LEN) aplicarSegredos(senha.slice(0, PREFIXO_LEN));
-
-  const remotos = await fetchRemoteUsers();
-  const lista = (remotos && Array.isArray(remotos) ? remotos : (DB.usuarios || [])).map(normalizeUser);
-  const found = lista.find(u => u.email.toLowerCase() == email);
-
-  // Compara diretamente o SHA-256 da senha digitada com a hash guardada no JSON
-  if (!found || !(await passwordMatches(found, senha))) { limparSegredos(); return { erro: 'E-mail ou senha incorretos.' }; }
-  if (!found.ativo) { limparSegredos(); return { erro: 'Usuário inativo. Fale com o administrador.' }; }
-  return { user: syncUser(found) };
+async function validarCredenciais(email, senha, lembrar = true) {
+  try {
+    const P = firebase.auth.Auth.Persistence;
+    await fb.auth.setPersistence(lembrar ? P.LOCAL : P.SESSION);
+    const cred = await fb.auth.signInWithEmailAndPassword(email, senha);
+    return await montarSessao(cred.user);
+  } catch (e) { limparSegredos(); return { erro: erroAuth(e) }; }
 }
 
 async function doLogin() {
@@ -1279,31 +1117,21 @@ async function doLogin() {
   const lembrar = $('#lr').checked;
   const msg = $('#lm'), btn = $('.login .btn');
   msg.textContent = '';
-  
+
   if (!email || !senha) return msg.textContent = 'Informe e-mail e senha.';
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Verificando...';
 
   try {
-    const r = await validarCredenciais(email, senha);
+    const r = await validarCredenciais(email, senha, lembrar);
     if (r.erro) {
       btn.disabled = false;
       btn.textContent = 'Entrar';
       return msg.textContent = r.erro;
     }
-    
     ME = r.user;
-	
-	sessao.save(ME.email,senha);
-
-    if (lembrar) {
-      if (!savedLogin.save(ME.email, senha))
-        showToast('Não foi possível salvar o login automaticamente no navegador.', 'warning');
-    } else {
-      savedLogin.clear();
-    }
-
+    if (lembrar) savedLogin.save(ME.email); else savedLogin.clear();
     startApp();
   } catch (e) {
     limparSegredos();
@@ -1313,71 +1141,47 @@ async function doLogin() {
   }
 }
 
-
 async function changePassword() {
   const atual = $('#p1').value, nova = $('#p2').value, msg = $('#pm'), btn = $('#pbtn');
   msg.style.color = '';
   msg.textContent = '';
   if (!atual) return msg.textContent = 'Informe a senha atual.';
-  if (nova.length < 4) return msg.textContent = 'Nova senha muito curta.';
+  if (nova.length < 6) return msg.textContent = 'A nova senha precisa ter pelo menos 6 caracteres.';
   btn.disabled = true; btn.textContent = 'Salvando...';
   try {
-    const lista = await fetchRemoteUsers();
-    if (!lista) throw new Error('Não foi possível consultar os usuários. Tente novamente.');
-    const u = lista.find(x => normalizeUser(x).email.toLowerCase() == ME.email.toLowerCase());
-    if (!u) throw new Error('Usuário não encontrado.');
-    if (!(await passwordMatches(normalizeUser(u), atual))) throw new Error('Senha atual incorreta.');
-    
-    // Guarda o hash SHA-256 direto da nova senha
-    u.senha = await sha256(nova);
-    delete u.senhausuario;
-    await patchUsersGist(lista);
-    ME.senha = u.senha;
-    if (savedLogin.load()) savedLogin.save(ME.email, nova);
-	if(sessao.load()) sessao.save(ME.email, nova);
+    const u = fb.auth.currentUser;
+    await u.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(u.email, atual));
+    await u.updatePassword(nova);
     showToast('Senha alterada com sucesso!');
     go('perfil');
   } catch (e) {
-    msg.textContent = e.message || 'Falha ao alterar a senha.';
+    const c = (e && e.code) || '';
+    msg.textContent = ['auth/invalid-credential', 'auth/wrong-password'].includes(c) ? 'Senha atual incorreta.'
+      : c == 'auth/weak-password' ? 'A nova senha é muito fraca.' : 'Falha ao alterar a senha.';
     btn.disabled = false; btn.textContent = 'Alterar senha';
   }
 }
 
+/* O gestor não define mais a senha de outra pessoa: o Firebase envia ao usuário um e-mail para ele mesmo criar a nova senha. */
 async function resolveReset(id) {
-  const nova = $('#np').value.trim(), msg = $('#nm'), btn = $('#nbtn');
+  const msg = $('#nm'), btn = $('#nbtn');
   msg.textContent = '';
-  if (nova.length < 4) return msg.textContent = 'A senha precisa ter pelo menos 4 caracteres.';
-  btn.disabled = true; btn.textContent = 'Salvando...';
+  btn.disabled = true; btn.textContent = 'Enviando...';
   try {
     await refreshNotifs();
     const n = DB.notificacoes.find(x => x.id == id);
     if (!n || n.status != 'pendente') throw new Error('Esta solicitação já foi tratada por outra pessoa.');
-    
-    const lista = await fetchRemoteUsers() || DB.usuarios;
-    if (!lista) throw new Error('Não foi possível consultar os usuários.');
-    const u = lista.find(x => normalizeUser(x).email.toLowerCase() == String(n.emailusuario).toLowerCase());
-    if (!u) throw new Error('Usuário não encontrado.');
-    
-    // Guarda o hash SHA-256 direto da nova senha
-    u.senha = await sha256(nova);
-    delete u.senhausuario;
-    await patchUsersGist(lista);
-    const local = DB.usuarios.find(x => x.email.toLowerCase() == String(n.emailusuario).toLowerCase());
-    if (local) local.senha = u.senha;
-    
+    await fb.auth.sendPasswordResetEmail(n.emailusuario);
     let aviso = '';
-    try { await closeNotif(id, 'atendida'); } catch (e) { aviso = 'A senha foi alterada, mas não consegui marcar a solicitação como atendida.'; }
-    window._novaSenha = nova;
+    try { await closeNotif(id, 'atendida'); } catch (e) { aviso = 'O e-mail foi enviado, mas não consegui marcar a solicitação como atendida.'; }
     openModal(`
-      <h3>Senha definida!</h3><br>
-      <p>Envie para <b>${esc(getUser(n.emailusuario).nome)}</b> (${esc(n.emailusuario)}):</p>
-      <p style="font-size:1.4rem;color:var(--g);font-weight:800;margin:10px 0;word-break:break-all">${esc(nova)}</p>
+      <h3>E-mail enviado!</h3><br>
+      <p>Enviamos para <b>${esc(getUser(n.emailusuario).nome)}</b> (${esc(n.emailusuario)}) um e-mail com o link para criar uma nova senha.</p>
       ${aviso ? `<p class="msg">${aviso}</p>` : ''}
-      <button class="btn" onclick="navigator.clipboard?.writeText(window._novaSenha);showToast('Senha copiada!')">Copiar senha</button>
       <button class="btn o" onclick="closeM();render()">Fechar</button>`);
   } catch (e) {
-    msg.textContent = e.message || 'Falha ao salvar a nova senha.';
-    btn.disabled = false; btn.textContent = 'Salvar nova senha';
+    msg.textContent = e.message || 'Falha ao enviar o e-mail de redefinição.';
+    btn.disabled = false; btn.textContent = 'Enviar e-mail de redefinição';
   }
 }
 
@@ -1389,6 +1193,8 @@ function syncUser(found) {
 }
 
 function logout() {
+  try { fb.auth.signOut(); } catch (e) { }
+  EMP_ID = '';
   sessao.clear();
   clearInterval(notifTimer);
   clearInterval(carousel.timer);
@@ -1410,7 +1216,7 @@ function renderForgot() {
   document.body.innerHTML = `
     <div class="login"><div class="box">
       ${logoImg()}<h3>Recuperar senha</h3>
-      <p class="meta">Informe seu e-mail. O seu <b>gestor será notificado</b>, vai criar uma nova senha para você e enviá-la manualmente.</p>
+      <p class="meta">Informe seu e-mail. Você receberá um link para criar uma nova senha.</p>
       <input id="fe" type="email" placeholder="seu e-mail" onkeydown="if(event.key=='Enter')requestReset()">
       <p class="msg" id="lm"></p>
       <button class="btn" id="fbtn" onclick="requestReset()">Solicitar nova senha</button>
@@ -1425,30 +1231,11 @@ async function requestReset() {
   if (!email) return msg.textContent = 'Informe seu e-mail.';
   btn.disabled = true; btn.textContent = 'Aguarde...';
   try {
-    const lista = await fetchRemoteUsers() || DB.usuarios;
-    if (!lista) throw new Error('Não foi possível consultar os usuários. Tente novamente.');
-    const usuarios = lista.map(normalizeUser);
-    const u = usuarios.find(x => x.email.toLowerCase() == email);
-    if (!u) throw new Error('E-mail não encontrado.');
-    if (!u.ativo) throw new Error('Usuário inativo. Fale com o administrador.');
-    const gestores = gestoresDe(u, usuarios);
-    if (!gestores.length) throw new Error('Não há gestor cadastrado para o seu usuário. Fale com o administrador.');
-
-    const notifs = (await loadTable('notificacoes')) || [];
-    const jaPendente = notifs.some(n => n.tipo == 'recuperar_senha' && n.status == 'pendente'
-      && String(n.emailusuario).toLowerCase() == email);
-    if (!jaPendente) {
-      notifs.push({ id: Date.now(), tipo: 'recuperar_senha', emailusuario: u.email, empresa: u.empresa,
-        gestores, data: now(), status: 'pendente', dataatendimento: '', atendidopor: '' });
-      DB.notificacoes = notifs;
-      await writeTable('notificacoes');
-    }
+    await fb.auth.sendPasswordResetEmail(email);
     msg.style.color = 'var(--g)';
-    msg.textContent = jaPendente
-      ? 'Você já tem uma solicitação pendente. Aguarde o contato do seu gestor.'
-      : 'Solicitação enviada! Seu gestor foi notificado e vai enviar uma nova senha para você.';
+    msg.textContent = 'Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha.';
   } catch (e) {
-    msg.textContent = e.message || 'Falha ao enviar a solicitação.';
+    msg.textContent = (e && e.code == 'auth/invalid-email') ? 'E-mail inválido.' : 'Falha ao enviar a solicitação. Tente novamente.';
   }
   btn.disabled = false; btn.textContent = 'Solicitar nova senha';
 }
@@ -2254,69 +2041,7 @@ function formatDate(s) {
   return s;
 }
 
-async function patchUsersGist(lista) {
-  if (!GH_TOKEN) throw new Error('Não foi possível concluir a operação. Tente novamente.');
-  const headers = jsonHeaders();
-  let file = META.usuarios && META.usuarios.file;
-  if (!file) {
-    const g = await fetch('https://api.github.com/gists/' + GISTS.usuarios, { headers, cache: 'no-store' });
-    if (!g.ok) throw new Error('Não foi possível concluir a operação. Tente novamente.');
-    file = Object.keys((await g.json()).files)[0];
-    META.usuarios = { id: GISTS.usuarios, file };
-  }
-  const r = await fetch('https://api.github.com/gists/' + GISTS.usuarios, {
-    method: 'PATCH', headers,
-    body: JSON.stringify({ files: { [file]: { content: JSON.stringify(lista, null, 2) } } })
-  });
-  if (!r.ok) throw new Error('Não foi possível salvar. Tente novamente.');
-}
-
-
 /* ============================ 9. CAMPANHAS ============================== */
-let REMOTE_PROGRAMAS = [];
-let REMOTE_PROGRAMAS_FILENAME = 'programas.json';
-
-async function fetchRemoteProgramas() {
-  const targetId = GISTS.programas || '2b36bffaed668f45ee2ca85765430cd3';
-  const url = `https://api.github.com/gists/${targetId}?t=${Date.now()}`;
-  const response = await fetch(url, {
-    headers: { Authorization: 'token ' + GH_TOKEN },
-    cache: 'no-store'
-  });
-  if (!response.ok) throw new Error('Não foi possível carregar os programas do Gist (' + response.status + ').');
-  const gistData = await response.json();
-  const fileName = Object.keys(gistData.files)[0] || 'programas.json';
-  REMOTE_PROGRAMAS_FILENAME = fileName;
-  const fileObj = gistData.files[fileName];
-  let contentText = fileObj.content;
-  if (fileObj.truncated && fileObj.raw_url) {
-    const rawRes = await fetch(fileObj.raw_url, { cache: 'no-store' });
-    contentText = await rawRes.text();
-  }
-  const parsed = parseLooseJson(contentText);
-  return Array.isArray(parsed) ? parsed : [];
-}
-
-async function updateRemoteProgramas(listaNova) {
-  const targetId = GISTS.programas || '2b36bffaed668f45ee2ca85765430cd3';
-  const url = `https://api.github.com/gists/${targetId}`;
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers: {
-      Authorization: 'token ' + GH_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      files: {
-        [REMOTE_PROGRAMAS_FILENAME]: {
-          content: JSON.stringify(listaNova, null, 2)
-        }
-      }
-    })
-  });
-  if (!response.ok) throw new Error('Falha ao atualizar o Gist no GitHub (' + response.status + ').');
-}
-
 function viewPrograms() {
   return `
   <div class="wrap one"><div>
@@ -2419,10 +2144,20 @@ function viewUsers() {
       </div>`).join('')}
   </div></div>`;
 }
-function setInactive(email, inativo) {
-  getUser(email).ativo = !inativo;
-  save('usuarios');
-  showToast(`Usuário ${inativo ? 'inativado' : 'ativado'}.`);
+async function setInactive(email, inativo) {
+  const u = getUser(email);
+  const antes = u.ativo;
+  u.ativo = !inativo;
+  try {
+    /* o acesso é controlado pelo perfil (regras do banco), então ele também é atualizado */
+    if (u.uid) await fb.db.ref('perfis/' + u.uid + '/ativo').set(!inativo);
+    save('usuarios');
+    showToast(`Usuário ${inativo ? 'inativado' : 'ativado'}.`);
+  } catch (e) {
+    u.ativo = antes;
+    showToast('Não foi possível alterar o usuário.', 'error');
+    render();
+  }
 }
 
 /* ============================= 11. KANBAN =============================== */
@@ -3004,12 +2739,12 @@ function viewPasswordRequests() {
   return `
   <div class="wrap one"><div>
     <h2>Solicitações de senha</h2>
-    <p class="meta">Quando alguém esquece a senha, você define uma nova aqui e envia para a pessoa manualmente.</p>
+    <p class="meta">Quando alguém esquece a senha, você pode enviar a ela um e-mail para criar uma nova senha.</p>
     <button class="btn s o" onclick="refreshNotifs().then(render)">↻ Atualizar</button><br><br>
     ${list.map(n => `
       <div class="box idea"><h3>${esc(getUser(n.emailusuario).nome)}</h3>
         <p>${esc(n.emailusuario)}</p><div class="meta">Solicitado em ${esc(n.data)}</div>
-        <button class="btn s" onclick="openResetForm(${n.id})">Definir nova senha</button>
+        <button class="btn s" onclick="openResetForm(${n.id})">Enviar e-mail de redefinição</button>
         <button class="btn s o" onclick="dismissReset(${n.id})">Dispensar</button>
       </div>`).join('') || '<div class="box">Nenhuma solicitação pendente.</div>'}
   </div></div>`;
@@ -3024,13 +2759,11 @@ function openResetForm(id) {
   const n = DB.notificacoes.find(x => x.id == id);
   if (!n) return;
   openModal(`
-    <h3>Nova senha para ${esc(getUser(n.emailusuario).nome)}</h3>
+    <h3>Redefinir senha de ${esc(getUser(n.emailusuario).nome)}</h3>
     <p class="meta">${esc(n.emailusuario)}</p><br>
-    <label>Nova senha (pode trocar a sugestão)</label>
-    <input id="np" value="${randomPassword()}">
-    <p class="meta">Depois de salvar, envie esta senha para a pessoa. Ela pode alterá-la em "Meu perfil".</p>
+    <p class="meta">A pessoa receberá um e-mail com um link para criar uma nova senha.</p>
     <p class="msg" id="nm"></p>
-    <button class="btn" id="nbtn" onclick="resolveReset(${id})">Salvar nova senha</button>
+    <button class="btn" id="nbtn" onclick="resolveReset(${id})">Enviar e-mail de redefinição</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
 }
 
@@ -3062,16 +2795,16 @@ async function dismissReset(id) {
   if (hash == '#privacidade') return renderDocPage('Política de privacidade', PRIVACIDADE);
 
   document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
-  try { DB.usuarios = (await loadTable('usuarios')) || []; } catch (e) { DB.usuarios = []; }
+  DB.usuarios = [];
   savedLogin.purgeLegacy();
-  
-  const ativa = sessao.load();
-  if (ativa) {
+
+  /* sessão do Firebase Authentication (se já estiver logado neste navegador) */
+  const fbUser = await new Promise(res => { const off = fb.auth.onAuthStateChanged(u => { off(); res(u); }); });
+  if (fbUser) {
     try {
-      const r = await validarCredenciais(ativa.email.toLowerCase(), ativa.senha);
+      const r = await montarSessao(fbUser);
       if (r.user) { ME = r.user; return startApp(); }
     } catch (e) { limparSegredos(); }
-    sessao.clear();
   }
   renderLogin();
 })();
