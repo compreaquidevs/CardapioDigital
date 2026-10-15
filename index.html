@@ -12,7 +12,11 @@
   --fg:#fff;
   --mut:#a9afb8;
   --g:#10b981;
-  --gd:#1f9e0a
+  --gd:#1f9e0a;
+  --hd:#14161899;
+  --bd:#3a3f46;
+  --bd2:#444;
+  --fab:#141618f0
 }
 * {
   box-sizing:border-box;
@@ -65,8 +69,8 @@ a {
 input,select,textarea {
   width:100%;
   background:var(--bg3);
-  border:1px solid #444;
-  color:#fff;
+  border:1px solid var(--bd2);
+  color:var(--fg);
   padding:10px;
   border-radius:10px;
   margin:4px 0 10px
@@ -91,7 +95,7 @@ header {
   position:sticky;
   top:0;
   z-index:50;
-  background:#14161899;
+  background:var(--hd);
   backdrop-filter:blur(10px);
   border-bottom:1px solid var(--g);
   display:flex;
@@ -132,7 +136,7 @@ header.hc .menu {
 .drop a {
   display:block;
   padding:11px 16px;
-  color:#fff;
+  color:var(--fg);
   text-decoration:none;
   cursor:pointer
 }
@@ -156,7 +160,7 @@ header.hc .menu {
   border-radius:16px;
   padding:18px;
   margin-bottom:16px;
-  border:1px solid #3a3f46
+  border:1px solid var(--bd)
 }
 .idea {
   border-left:4px solid var(--g)
@@ -187,8 +191,8 @@ header.hc .menu {
 
 .act button {
   background:none;
-  border:1px solid #555;
-  color:#fff;
+  border:1px solid var(--bd2);
+  color:var(--fg);
   border-radius:20px;
   padding:4px 12px;
   cursor:pointer;
@@ -309,7 +313,7 @@ header.hc .menu {
   bottom:0;
   left:0;
   right:0;
-  background:#141618f0;
+  background:var(--fab);
   border-top:1px solid var(--g);
   padding:12px;
   text-align:center;
@@ -525,7 +529,7 @@ header.hc .menu {
 .steps .st p { margin:0 }
 .doc ul { margin:8px 0 8px 22px }
 .car img.logo { object-fit:contain; background:var(--bg2) }
-.pbar { height:10px; border-radius:10px; background:#3a3f46; overflow:hidden; margin:8px 0 }
+.pbar { height:10px; border-radius:10px; background:var(--bd); overflow:hidden; margin:8px 0 }
 .pbar div { height:100%; background:var(--g); border-radius:10px; transition:.3s }
 .kcm { max-height:150px; overflow:auto; margin-top:8px }
 .kc input { user-select:text; -webkit-user-select:text }
@@ -536,7 +540,7 @@ header.hc .menu {
 .badge.late { background:#e53935; color:#fff }
 .kc.late { box-shadow:0 0 0 2px #e53935 }
 .kc.arq { opacity:.6 }
-.tag { display:inline-block; background:var(--bg3); border:1px solid #444; color:var(--g); border-radius:20px; padding:1px 10px; font-size:.78rem; margin:0 4px 4px 0; cursor:pointer }
+.tag { display:inline-block; background:var(--bg3); border:1px solid var(--bd2); color:var(--g); border-radius:20px; padding:1px 10px; font-size:.78rem; margin:0 4px 4px 0; cursor:pointer }
 .tag.on { background:var(--g); color:#111; border-color:var(--g) }
 .men { color:var(--g); font-weight:700 }
 .mnt { display:none; background:var(--bg3); border:1px solid var(--g); border-radius:10px; margin-top:4px; overflow:hidden }
@@ -554,7 +558,7 @@ header.hc .menu {
 .car .sl small { color:#ffd93b; font-weight:700; letter-spacing:.04em }
 .brow { display:flex; align-items:center; gap:10px; margin:5px 0; font-size:.88rem }
 .brow .bl { width:120px; flex:none; color:var(--mut); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.brow .bt { flex:1; height:12px; background:#3a3f46; border-radius:8px; overflow:hidden }
+.brow .bt { flex:1; height:12px; background:var(--bd); border-radius:8px; overflow:hidden }
 .brow .bt div { height:100%; background:var(--g) }
 .kpi { font-size:1.8rem; font-weight:800; color:var(--g) }
 
@@ -579,6 +583,49 @@ header.hc .menu {
   vertical-align: middle;
   margin-right: 6px;
 }
+
+#optbtn{position:relative}
+.dot{position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#e53935;border:2px solid #fff;box-sizing:border-box}
+.cta.plain,.login .cta{background:none!important;border:0!important;box-shadow:none!important;color:inherit;text-decoration:underline;padding:4px;display:inline-block;cursor:pointer}
+.bdel{width:100%;margin-top:10px;box-sizing:border-box}
+.foot{margin:40px auto 0;padding:24px 12px;text-align:center;font-size:13px;opacity:.9}
+.foot .dev{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.foot .dev img{height:22px;width:22px;border-radius:6px;object-fit:cover}
+.foot .brand{font-weight:800;letter-spacing:2px;background:linear-gradient(90deg,var(--g),#7bd88f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.foot small{font-size:10px;opacity:.7}
+.foot .links a{margin:0 8px;cursor:pointer;text-decoration:underline}
+
+[data-theme=light]{--bg:#f3f8f5;--bg2:#fff;--bg3:#eaf2ee;--fg:#14211b;--mut:#55665d;--g:#0b8a5f;--gd:#07694a}
+[data-theme=light] .btn{color:#fff}
+[data-theme=light] .btn:hover{box-shadow:0 4px 12px #0b8a5f44}
+[data-theme=light] .btn.o{background:none;color:var(--g)}
+[data-theme=light] .btn.r{background:#e4ece8;color:#14211b;border:1px solid #c9d6cf}
+[data-theme=light] .btn.r:hover{background:#d6e2dc;box-shadow:none}
+[data-theme=light] input,[data-theme=light] select,[data-theme=light] textarea{color:var(--fg);border-color:#c9d6cf}
+[data-theme=light] header{background:#ffffffee}
+[data-theme=light] .drop{box-shadow:0 10px 30px #0b8a5f25}
+[data-theme=light] .drop a{color:var(--fg)}
+[data-theme=light] .drop a:hover{background:var(--g);color:#fff}
+[data-theme=light] .box{border-color:#d9e4de;box-shadow:0 1px 5px #0b8a5f14}
+[data-theme=light] .badge{color:#fff}
+.tbl{width:100%;border-collapse:collapse;font-size:.9rem}.tbl th,.tbl td{padding:8px;border-bottom:1px solid #8884;text-align:left;vertical-align:top}.tbl th{color:var(--g)}
+.scr{overflow-x:auto}
+.ico{width:18px;height:18px;vertical-align:-3px;margin-right:4px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.act button.on .ico{fill:currentColor}
+.ai{display:inline-block;width:20px;height:20px;vertical-align:-4px;margin-right:6px;animation:aispin 1.6s ease-in-out infinite;color:#ffd93b}
+@keyframes aispin{0%,100%{transform:rotate(-12deg) scale(1)}50%{transform:rotate(12deg) scale(1.25)}}
+.acc{background:var(--bg3);border-radius:10px;margin:8px 0;padding:8px 12px}.acc summary{cursor:pointer;font-weight:700;color:var(--g)}
+.q{margin:14px 0}.q label{display:flex;gap:6px;align-items:center;padding:3px 0;cursor:pointer}.q input{width:auto;margin:0}
+.crs{cursor:pointer}.okb{color:var(--g);font-weight:700}
+
+[data-theme=light]{--hd:#ffffffee;--bd:#d6e3dc;--bd2:#bccdc4;--fab:#fffffff5}
+[data-theme=light] header{background:var(--hd)!important}
+[data-theme=light] .act button{background:#fff}
+.drop{max-height:calc(100vh - 70px);overflow-y:auto}
+.sc{flex-wrap:wrap}
+.sc .inat{margin-left:auto;display:flex;align-items:center;gap:6px;padding-right:12px;white-space:nowrap;flex:none}
+.sc .inat input{width:auto;margin:0}
+.fdesc{font-size:.78rem;line-height:1.5;word-break:break-word;color:var(--mut);margin:-4px 0 10px}
 </style>
 </head>
 <body>
@@ -610,20 +657,42 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fb = { auth: firebase.auth(), db: firebase.database() };
 /* Tabelas de cada empresa (as regras do banco só deixam o usuário acessar a própria empresa). */
-const TABLES = ['usuarios', 'cards', 'curtidas', 'comentarios', 'ideias', 'programas', 'notificacoes', 'metas', 'comentarioscard'];
+const TABLES = ['usuarios', 'cards', 'curtidas', 'comentarios', 'ideias', 'programas', 'notificacoes', 'metas', 'comentarioscard', 'grupos', 'reclamacoes'];
 let EMPRESA = null;   /* dados da empresa (info) */
 let EMP_ID = '';      /* chave da empresa no banco, ex.: "insight" */
 
 function limparSegredos() { EMP_ID = ''; try { fb.auth.signOut(); } catch (e) { } }
 
-const STATUS = ['rascunho', 'pendente', 'em avaliação inicial', 'em avaliação de negócio',
-  'aguardando resposta do idealizador', 'em implantação', 'implantada', 'reprovada'];
+const STATUS = ['rascunho', 'pendente', 'em triagem', 'em avaliação inicial', 'em avaliação de negócio',
+  'aguardando resposta do idealizador', 'em implantação', 'em fase de encerramento', 'implantada', 'reprovada'];
 const STATUS_CSS = {
   'rascunho': 'rascunho', 'pendente': 'pendente', 'em avaliação inicial': 'avaliacao-inicial',
   'em avaliação de negócio': 'avaliacao-de-negocio', 'aguardando resposta do idealizador': 'aguardando',
-  'em implantação': 'implantacao', 'implantada': 'implantada', 'reprovada': 'reprovada'
+  'em implantação': 'implantacao', 'em triagem': 'avaliacao-inicial', 'em fase de encerramento': 'implantacao', 'implantada': 'implantada', 'reprovada': 'reprovada'
 };
-const STATUS_EDITAVEIS = ['pendente', 'em avaliação inicial', 'em avaliação de negócio', 'em implantação'];
+const souAvaliador = i => sameEmail(i.emailaprovador, ME.email) || (i.status == 'em implantação' && sameEmail(i.emailimplantador, ME.email));
+const pendentesAvaliar = () => companyIdeas().filter(i => souAvaliador(i) && STATUS_EDITAVEIS.includes(i.status));
+const FLUXOS = {
+  simples: ['pendente', 'em avaliação inicial', 'em avaliação de negócio', 'aguardando resposta do idealizador', 'em implantação', 'implantada', 'reprovada'],
+  complexo: ['pendente', 'em triagem', 'em avaliação inicial', 'em avaliação de negócio', 'aguardando resposta do idealizador', 'em implantação', 'em fase de encerramento', 'implantada', 'reprovada']
+};
+const fluxoDe = i => { const p = DB.programas.find(x => x.programaideia == i.programaideia && x.empresa == i.empresa); return FLUXOS[p && p.fluxo] ? p.fluxo : 'simples'; };
+const fluxoDesc = f => FLUXOS[f].filter(x => !['aguardando resposta do idealizador', 'reprovada'].includes(x)).map(x => x[0].toUpperCase() + x.slice(1)).join(' > ');
+function nextStatus(de, fluxo) {
+  const f = FLUXOS[fluxo].filter(x => !['aguardando resposta do idealizador', 'reprovada'].includes(x));
+  const k = f.indexOf(de);
+  if (de == 'aguardando resposta do idealizador') return f.filter(x => x != 'implantada' && x != 'em implantação' && x != 'em fase de encerramento');
+  return k >= 0 && k < f.length - 1 ? [f[k + 1]] : [];
+}
+const SEM_REPROVAR = ['reprovada', 'implantada', 'rascunho', 'aguardando resposta do idealizador'];
+const SEM_AGUARDAR = ['reprovada', 'implantada', 'rascunho'];
+function statusPermitido(de, para, fluxo = 'simples') {
+  if (de == para) return true;
+  if (para == 'reprovada') return !SEM_REPROVAR.includes(de);
+  if (para == 'aguardando resposta do idealizador') return !SEM_AGUARDAR.includes(de);
+  return nextStatus(de, fluxo).includes(para);
+}
+const STATUS_EDITAVEIS = ['pendente', 'em triagem', 'em fase de encerramento', 'em avaliação inicial', 'em avaliação de negócio', 'em implantação'];
 const LANES = ['PARA FAZER', 'EM PROGRESSO', 'PARA AVALIAR', 'EM AVALIAÇÃO', 'FINALIZADO'];
 const PRIORIDADE = ['', 'Baixa', 'Média', 'Alta'];
 const CAROUSEL_IMGS = [
@@ -639,7 +708,7 @@ const QUOTES = [
 ];
 const PAGE_SIZE = 15;
 const PRAZO_AVALIACAO_DIAS = 5; /* dias parada em avaliação até o lembrete ao aprovador e o destaque de atraso */
-const STATUS_AVALIACAO = ['pendente', 'em avaliação inicial', 'em avaliação de negócio'];
+const STATUS_AVALIACAO = ['pendente', 'em triagem', 'em avaliação inicial', 'em avaliação de negócio'];
 const STATUS_FIM = ['em implantação', 'implantada', 'reprovada'];
 
 /* =========================== 2. UTILITÁRIOS ============================= */
@@ -732,7 +801,7 @@ function seedData() {
   return {
     perfis: [{ tipo: 'usuario_comum' }, { tipo: 'admin' }, { tipo: 'aprovador' }],
     empresas: [],
-    usuarios: [], ideias: [], programas: [], comentarios: [], curtidas: [], cards: [], notificacoes: [], metas: [], comentarioscard: []
+    usuarios: [], ideias: [], programas: [], comentarios: [], curtidas: [], cards: [], notificacoes: [], metas: [], comentarioscard: [], grupos: [], reclamacoes: []
   };
 }
 
@@ -858,6 +927,7 @@ const SYNC = {
   ideias:      { key: i => String(i.id), norm: l => l.map(normalizeIdea) },
   curtidas:    { key: c => c.idideia + '|' + c.autorcurtida, norm: l => l },
   comentarios: { key: c => [c.idideia, c.autorcomentario, c.data, c.comentario].join('|'), norm: l => l },
+  reclamacoes: { key: r => String(r.id), norm: l => l },
   cards:       { key: b => [b.board, b.datacriacao, b.emailautorcriacao].join('|'), norm: l => l.map(normalizeBoard), merge: mergeBoard }
 };
 const SNAP = {};
@@ -955,7 +1025,9 @@ const getUser = email => DB.usuarios.find(u => u.email == email) || { nome: emai
 const isApprover = () => ME.perfil != 'usuario_comum';
 const isAdmin = () => ME.perfil == 'admin';
 const companyIdeas = () => DB.ideias.filter(i => i.empresa == ME.empresa);
-const companyUsers = () => DB.usuarios.filter(u => u.empresa == ME.empresa);
+const companyUsers = () => DB.usuarios.filter(u => u.empresa == ME.empresa && u.perfil != 'superadmin');
+const companyGroups = () => (DB.grupos || []).filter(g => g.empresa == ME.empresa);
+const userGroups = email => companyGroups().filter(g => (g.membros || []).some(m => sameEmail(m, email)));
 const companyPrograms = () => DB.programas.filter(p => p.empresa == ME.empresa);
 const ideaLikes = i => DB.curtidas.filter(c => c.idideia == i.id);
 const ideaComments = i => DB.comentarios.filter(c => c.idideia == i.id);
@@ -977,6 +1049,20 @@ const PRIVACIDADE = `
 <h2>5. Seus direitos</h2><p>Você pode solicitar acesso, correção ou exclusão dos seus dados ao administrador da empresa.</p>
 <h2>6. Cookies e cache</h2><p>Com "Lembrar login", sua sessão fica salva no navegador; você pode removê-la ao sair.</p>`;
 
+const LGPD = `
+<h2>LGPD – Lei Geral de Proteção de Dados</h2>
+<p>O INSIGHT trata dados pessoais conforme a Lei nº 13.709/2018 (LGPD), com finalidade específica, adequação e necessidade.</p>
+<p><b>Base legal:</b> execução do contrato com a empresa contratante e legítimo interesse na operação da plataforma.</p>
+<p><b>Direitos do titular:</b> confirmação de tratamento, acesso, correção, anonimização, portabilidade e eliminação dos dados, mediante solicitação ao administrador da sua empresa.</p>
+<p><b>Retenção e segurança:</b> os dados são mantidos enquanto a conta estiver ativa e protegidos por autenticação e isolamento por empresa.</p>`;
+const DOC_UNIFICADO = '<h2 style="color:var(--g)">Termos de uso</h2>' + TERMOS + '<h2 style="color:var(--g)">Política de privacidade</h2>' + PRIVACIDADE + LGPD;
+function footerHtml() {
+  return `<footer class="foot">
+    <div class="dev">Desenvolvido por <img src="img/img.png" alt="" onerror="this.style.display='none'"><span class="brand">INSIGHT</span><small>by compreaquidevs</small></div>
+    <div class="links" style="margin-top:8px"><a href="#termos" target="_blank">Termos, Privacidade e LGPD</a></div>
+    <div style="margin-top:6px">© ${new Date().getFullYear()} Todos os direitos reservados.</div>
+  </footer>`;
+}
 function renderDocPage(titulo, html) {
   document.body.innerHTML = `
     <header>${logoImg()}<a href="#" onclick="location.hash='';location.reload()">Voltar</a></header>
@@ -1011,6 +1097,7 @@ function renderCompanyPage() {
         <div class="box"><h3>🎯 Campanhas</h3><p class="meta">Programas de ideias com um tema definido ajudam a direcionar a criatividade para os desafios do momento.</p></div>
         <div class="box"><h3>✅ Avaliação com parecer</h3><p class="meta">Aprovadores analisam cada ideia, atualizam o status e deixam um parecer para o idealizador.</p></div>
         <div class="box"><h3>📋 Board kanban</h3><p class="meta">Organize as ações de implantação em colunas e acompanhe o andamento de cada tarefa.</p></div>
+        <div class="box"><h3>📈 Indicadores e metas</h3><p class="meta">Acompanhe indicadores de ideias e defina metas e submetas com responsáveis e prazos.</p></div>
         <div class="box"><h3>👥 Gestão de usuários</h3><p class="meta">Perfis de colaborador, aprovador e administrador, com acesso separado por empresa.</p></div>
       </div>
 
@@ -1041,6 +1128,433 @@ function renderCompanyPage() {
 
 /* ========================== 5. AUTENTICAÇÃO ============================= */
 let ME = null;
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
+let LANG = lsGet('ins_lang') || 'pt';
+const I18N = { en: { 'Home': 'Home', 'Score': 'Score', 'Meu perfil': 'My profile', 'Minhas ideias': 'My ideas', 'Notificações': 'Notifications', 'Metas': 'Goals', 'Todas as ideias': 'All ideas', 'Programa de ideias': 'Idea programs', 'Indicadores': 'Indicators', 'Gestão de usuários': 'User management', 'Aplicação': 'Application', 'Sair': 'Sign out', 'Aprendendo a inovar': 'Learning to innovate', 'Alterar senha': 'Change password', 'Senha atual': 'Current password', 'Nova senha': 'New password', 'Tema': 'Theme', 'Idioma': 'Language', '＋ Criar ideia': '＋ Create idea' },
+  es: { 'Home': 'Inicio', 'Score': 'Puntuación', 'Meu perfil': 'Mi perfil', 'Minhas ideias': 'Mis ideas', 'Notificações': 'Notificaciones', 'Metas': 'Metas', 'Todas as ideias': 'Todas las ideas', 'Programa de ideias': 'Programa de ideas', 'Indicadores': 'Indicadores', 'Gestão de usuários': 'Gestión de usuarios', 'Aplicação': 'Aplicación', 'Sair': 'Salir', 'Aprendendo a inovar': 'Aprendiendo a innovar', 'Alterar senha': 'Cambiar contraseña', 'Senha atual': 'Contraseña actual', 'Nova senha': 'Nueva contraseña', 'Tema': 'Tema', 'Idioma': 'Idioma', '＋ Criar ideia': '＋ Crear idea' } };
+I18N.en['Reportar problema'] = 'Report a problem'; I18N.es['Reportar problema'] = 'Reportar problema';
+I18N.en['Criar grupo'] = 'Create group'; I18N.es['Criar grupo'] = 'Crear grupo';
+const TR_RAW = `Entrar‖Sign in‖Entrar
+Senha‖Password‖Contraseña
+E-mail‖Email‖Correo electrónico
+Esqueci a senha‖Forgot password‖Olvidé mi contraseña
+Lembrar login neste navegador‖Remember login on this browser‖Recordar inicio de sesión en este navegador
+ACESSE nossa página‖VISIT our website‖VISITE nuestra página
+Admin‖Admin‖Admin
+Recuperar senha‖Recover password‖Recuperar contraseña
+Solicitar nova senha‖Request new password‖Solicitar nueva contraseña
+Informe seu e-mail. Você receberá um link para criar uma nova senha.‖Enter your email. You will receive a link to create a new password.‖Ingrese su correo. Recibirá un enlace para crear una nueva contraseña.
+Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha.‖If this email is registered, you will receive a link to create a new password.‖Si este correo está registrado, recibirá un enlace para crear una nueva contraseña.
+Informe e-mail e senha.‖Enter email and password.‖Ingrese correo y contraseña.
+Informe seu e-mail.‖Enter your email.‖Ingrese su correo.
+Erro ao realizar o login. Tente novamente.‖Login error. Please try again.‖Error al iniciar sesión. Inténtelo de nuevo.
+E-mail ou senha incorretos.‖Incorrect email or password.‖Correo o contraseña incorrectos.
+Voltar‖Back‖Volver
+‹ Voltar‖‹ Back‖‹ Volver
+← Boards‖← Boards‖← Boards
+Carregando...‖Loading...‖Cargando...
+Verificando...‖Checking...‖Verificando...
+Aguarde...‖Please wait...‖Espere...
+Enviando...‖Sending...‖Enviando...
+Salvando...‖Saving...‖Guardando...
+Cancelar‖Cancel‖Cancelar
+Salvar‖Save‖Guardar
+Salvar Alterações‖Save changes‖Guardar cambios
+Salvar rascunho‖Save draft‖Guardar borrador
+Confirmar‖Confirm‖Confirmar
+Confirmação‖Confirmation‖Confirmación
+Fechar‖Close‖Cerrar
+Enviar‖Send‖Enviar
+Editar‖Edit‖Editar
+Excluir‖Delete‖Eliminar
+Dispensar‖Dismiss‖Descartar
+Todos‖All‖Todos
+Todas‖All‖Todas
+Ver mais‖See more‖Ver más
+Tentar novamente‖Try again‖Reintentar
+Limpar filtros‖Clear filters‖Limpiar filtros
+Selecione...‖Select...‖Seleccione...
+Geral‖General‖General
+Por mês‖By month‖Por mes
+Por campanha‖By campaign‖Por campaña
+Home‖Home‖Inicio
+Score‖Score‖Puntuación
+Sair‖Sign out‖Salir
+Meu perfil‖My profile‖Mi perfil
+Minhas ideias‖My ideas‖Mis ideas
+Notificações‖Notifications‖Notificaciones
+Aplicação‖Application‖Aplicación
+Metas‖Goals‖Metas
+Todas as ideias‖All ideas‖Todas las ideas
+Avaliar ideias‖Review ideas‖Evaluar ideas
+Programa de ideias‖Idea programs‖Programa de ideas
+Indicadores‖Indicators‖Indicadores
+Gestão de usuários‖User management‖Gestión de usuarios
+Aprendendo a inovar‖Learning to innovate‖Aprendiendo a innovar
+Reportar problema‖Report a problem‖Reportar problema
+Reclamações‖Complaints‖Reclamaciones
+Painel‖Dashboard‖Panel
+Painel Admin‖Admin panel‖Panel de administración
+Painel Superadmin‖Superadmin panel‖Panel de superadmin
+Visão por empresa‖Overview by company‖Resumen por empresa
+Empresa‖Company‖Empresa
+Usuários‖Users‖Usuarios
+Ideias‖Ideas‖Ideas
+Boards‖Boards‖Tableros
+Cards‖Cards‖Tarjetas
+Submetas‖Subgoals‖Submetas
+Sem dados.‖No data.‖Sin datos.
+Autor‖Author‖Autor
+Abertura‖Opened‖Apertura
+Conclusão‖Completion‖Conclusión
+Status‖Status‖Estado
+＋ Criar ideia‖＋ Create idea‖＋ Crear idea
+＋ Nova campanha‖＋ New campaign‖＋ Nueva campaña
+＋ Nova meta‖＋ New goal‖＋ Nueva meta
+＋ Novo board‖＋ New board‖＋ Nuevo tablero
+＋ Novo card‖＋ New card‖＋ Nueva tarjeta
+＋ Adicionar‖＋ Add‖＋ Añadir
+＋ Adicionar submeta‖＋ Add subgoal‖＋ Añadir submeta
+＋ Criar grupo‖＋ Create group‖＋ Crear grupo
+Criar grupo‖Create group‖Crear grupo
+↻ Atualizar‖↻ Refresh‖↻ Actualizar
+⬇ Exportar CSV‖⬇ Export CSV‖⬇ Exportar CSV
+✏️ Ajustar‖✏️ Adjust‖✏️ Ajustar
+✏️ Editar board‖✏️ Edit board‖✏️ Editar tablero
+🛠 Avaliar‖🛠 Review‖🛠 Evaluar
+📋 Criar card‖📋 Create card‖📋 Crear tarjeta
+🗑 Excluir board‖🗑 Delete board‖🗑 Eliminar tablero
+💡 Feed de ideias‖💡 Idea feed‖💡 Feed de ideas
+🏆 Pontuação‖🏆 Ranking‖🏆 Clasificación
+🎯 Campanhas‖🎯 Campaigns‖🎯 Campañas
+📋 Board kanban‖📋 Kanban board‖📋 Tablero kanban
+👥 Gestão de usuários‖👥 User management‖👥 Gestión de usuarios
+📈 Indicadores e metas‖📈 Indicators and goals‖📈 Indicadores y metas
+🔍 Buscar ideias por texto, autor, campanha ou tag...‖🔍 Search ideas by text, author, campaign or tag...‖🔍 Buscar ideas por texto, autor, campaña o etiqueta...
+Ver score completo‖See full score‖Ver puntuación completa
+Meu perfil‖My profile‖Mi perfil
+Nome completo‖Full name‖Nombre completo
+Data de nascimento‖Date of birth‖Fecha de nacimiento
+Conquistas‖Achievements‖Logros
+Alterar senha‖Change password‖Cambiar contraseña
+Senha atual‖Current password‖Contraseña actual
+Nova senha‖New password‖Nueva contraseña
+Tema‖Theme‖Tema
+Idioma‖Language‖Idioma
+Padrão (escuro)‖Default (dark)‖Predeterminado (oscuro)
+Fundo branco‖White background‖Fondo blanco
+Informe a senha atual.‖Enter the current password.‖Ingrese la contraseña actual.
+A nova senha precisa ter pelo menos 6 caracteres.‖The new password must have at least 6 characters.‖La nueva contraseña debe tener al menos 6 caracteres.
+Senha alterada com sucesso!‖Password changed successfully!‖¡Contraseña cambiada con éxito!
+Senha atual incorreta.‖Incorrect current password.‖Contraseña actual incorrecta.
+Minhas Notificações‖My notifications‖Mis notificaciones
+Marcar como lida‖Mark as read‖Marcar como leída
+Lida‖Read‖Leída
+Nenhuma notificação encontrada.‖No notifications found.‖No se encontraron notificaciones.
+Solicitações de senha‖Password requests‖Solicitudes de contraseña
+Nenhuma solicitação pendente.‖No pending requests.‖No hay solicitudes pendientes.
+Enviar e-mail de redefinição‖Send reset email‖Enviar correo de restablecimiento
+Dispensar esta solicitação sem alterar a senha?‖Dismiss this request without changing the password?‖¿Descartar esta solicitud sin cambiar la contraseña?
+Solicitação dispensada.‖Request dismissed.‖Solicitud descartada.
+E-mail enviado!‖Email sent!‖¡Correo enviado!
+Você tem novos avisos de prazo nas notificações.‖You have new deadline alerts in notifications.‖Tiene nuevos avisos de plazo en las notificaciones.
+Título‖Title‖Título
+Descrição‖Description‖Descripción
+Benefício‖Benefit‖Beneficio
+Campanha‖Campaign‖Campaña
+Coautores‖Co-authors‖Coautores
+Ideia privada‖Private idea‖Idea privada
+Tags (separe por vírgula)‖Tags (comma separated)‖Etiquetas (separadas por coma)
+Usuário aprovador (obrigatório)‖Approver user (required)‖Usuario aprobador (obligatorio)
+Aprovador da ideia‖Idea approver‖Aprobador de la idea
+Informar um implantador‖Select an implementer‖Indicar un implementador
+— sem implantador —‖— no implementer —‖— sin implementador —
+Parceiros (outra empresa que ajudará na implantação)‖Partners (another company that will help implement)‖Socios (otra empresa que ayudará en la implantación)
+Nome do parceiro‖Partner name‖Nombre del socio
+Parecer para o idealizador‖Feedback for the idea author‖Opinión para el autor de la idea
+Parecer:‖Feedback:‖Opinión:
+✅ Avaliação com parecer‖✅ Reviewed with feedback‖✅ Evaluada con opinión
+Preencha título, descrição, campanha e aprovador.‖Fill in title, description, campaign and approver.‖Complete título, descripción, campaña y aprobador.
+Transição de status não permitida.‖Status transition not allowed.‖Transición de estado no permitida.
+Esta campanha já foi encerrada.‖This campaign has already ended.‖Esta campaña ya finalizó.
+Avaliação/Status atualizados!‖Review/Status updated!‖¡Evaluación/Estado actualizados!
+Você ainda não criou ideias.‖You haven't created ideas yet.‖Aún no ha creado ideas.
+Nenhuma ideia encontrada.‖No ideas found.‖No se encontraron ideas.
+Nenhuma ideia aguardando sua avaliação.‖No ideas awaiting your review.‖No hay ideas esperando su evaluación.
+Nenhuma ideia para exportar com os filtros atuais.‖No ideas to export with the current filters.‖No hay ideas para exportar con los filtros actuales.
+IA analisou: ideias parecidas já cadastradas‖AI analyzed: similar ideas already registered‖La IA analizó: ideas similares ya registradas
+Inserida a partir de‖Created from‖Creada desde
+Inserida até‖Created until‖Creada hasta
+Responsável‖Owner‖Responsable
+Responsável (autor ou avaliador)‖Owner (author or reviewer)‖Responsable (autor o evaluador)
+Prioridade‖Priority‖Prioridad
+Baixa‖Low‖Baja
+Média‖Medium‖Media
+Alta‖High‖Alta
+pendente‖pending‖pendiente
+em triagem‖in screening‖en triaje
+em avaliação inicial‖initial review‖evaluación inicial
+em avaliação de negócio‖business review‖evaluación de negocio
+aguardando resposta do idealizador‖awaiting author's reply‖esperando respuesta del autor
+em implantação‖being implemented‖en implantación
+em fase de encerramento‖closing phase‖en fase de cierre
+implantada‖implemented‖implantada
+reprovada‖rejected‖rechazada
+rascunho‖draft‖borrador
+(indisponível)‖(unavailable)‖(no disponible)
+Campanhas mais ativas‖Most active campaigns‖Campañas más activas
+Ideias por mês‖Ideas per month‖Ideas por mes
+ideias enviadas‖ideas submitted‖ideas enviadas
+tempo médio de avaliação‖average review time‖tiempo medio de evaluación
+taxa de aprovação (em implantação + implantadas ÷ decididas)‖approval rate (in implementation + implemented ÷ decided)‖tasa de aprobación (en implantación + implantadas ÷ decididas)
+Acesso restrito a aprovadores.‖Restricted to approvers.‖Acceso restringido a aprobadores.
+Indicador: implantadas x reprovadas‖Indicator: implemented vs rejected‖Indicador: implantadas vs rechazadas
+Reprovadas:‖Rejected:‖Rechazadas:
+Implantadas:‖Implemented:‖Implantadas:
+implantadas‖implemented‖implantadas
+Nenhuma ideia implantada ou reprovada no filtro atual.‖No implemented or rejected ideas in the current filter.‖Ninguna idea implantada o rechazada en el filtro actual.
+Programas de ideias com um tema definido ajudam a direcionar a criatividade para os desafios do momento.‖Idea programs with a defined theme help direct creativity toward current challenges.‖Los programas de ideas con un tema definido ayudan a dirigir la creatividad hacia los desafíos del momento.
+Título (Programa de Ideia)‖Title (Idea program)‖Título (Programa de ideas)
+Digite o título da campanha‖Type the campaign title‖Escriba el título de la campaña
+Digite a descrição‖Type the description‖Escriba la descripción
+Digite o critério da campanha‖Type the campaign criteria‖Escriba el criterio de la campaña
+Fluxo da campanha‖Campaign flow‖Flujo de la campaña
+Critério‖Criteria‖Criterio
+Critério da campanha‖Campaign criteria‖Criterio de la campaña
+Início‖Start‖Inicio
+Fim‖End‖Fin
+Encerrada‖Ended‖Finalizada
+Campanhas encerradas deixam de aparecer ao criar uma nova ideia.‖Ended campaigns no longer appear when creating a new idea.‖Las campañas finalizadas dejan de aparecer al crear una idea nueva.
+Nenhuma campanha‖No campaign‖Ninguna campaña
+Nenhuma campanha cadastrada.‖No campaigns registered.‖No hay campañas registradas.
+Sem campanha‖No campaign‖Sin campaña
+O título é obrigatório.‖The title is required.‖El título es obligatorio.
+O fim não pode ser anterior ao início.‖The end cannot be before the start.‖El fin no puede ser anterior al inicio.
+Há ideias vinculadas a esta campanha. Não é possível excluir.‖There are ideas linked to this campaign. It cannot be deleted.‖Hay ideas vinculadas a esta campaña. No se puede eliminar.
+Grupos‖Groups‖Grupos
+Nome do grupo‖Group name‖Nombre del grupo
+Usuários do grupo‖Group users‖Usuarios del grupo
+Inativo‖Inactive‖Inactivo
+Informe o nome do grupo.‖Enter the group name.‖Ingrese el nombre del grupo.
+Selecione ao menos um usuário.‖Select at least one user.‖Seleccione al menos un usuario.
+Já existe um grupo com esse nome.‖A group with this name already exists.‖Ya existe un grupo con ese nombre.
+Grupo criado!‖Group created!‖¡Grupo creado!
+Excluir este grupo? Os boards e metas já criados não são alterados.‖Delete this group? Boards and goals already created are not changed.‖¿Eliminar este grupo? Los tableros y metas ya creados no se modifican.
+Selecionar grupo (marca todos os usuários)…‖Select group (checks all its users)…‖Seleccionar grupo (marca a todos sus usuarios)…
+Não foi possível alterar o usuário.‖Could not change the user.‖No se pudo cambiar el usuario.
+Usuários com acesso‖Users with access‖Usuarios con acceso
+Nome do board‖Board name‖Nombre del tablero
+Novo board‖New board‖Nuevo tablero
+Editar board‖Edit board‖Editar tablero
+Board‖Board‖Tablero
+Card‖Card‖Tarjeta
+Board criado!‖Board created!‖¡Tablero creado!
+Board atualizado!‖Board updated!‖¡Tablero actualizado!
+Board excluído!‖Board deleted!‖¡Tablero eliminado!
+Board não encontrado.‖Board not found.‖Tablero no encontrado.
+Card salvo!‖Card saved!‖¡Tarjeta guardada!
+Card excluído!‖Card deleted!‖¡Tarjeta eliminada!
+Deseja realmente excluir este card?‖Do you really want to delete this card?‖¿Realmente desea eliminar esta tarjeta?
+Informe o nome do board.‖Enter the board name.‖Ingrese el nombre del tablero.
+Informe o título do card.‖Enter the card title.‖Ingrese el título de la tarjeta.
+Nenhum board disponível para você.‖No boards available to you.‖No hay tableros disponibles para usted.
+Você não participa de nenhum board. Crie um em "Aplicação".‖You are not in any board. Create one in "Application".‖No participa en ningún tablero. Cree uno en "Aplicación".
+Criar card a partir da ideia‖Create card from idea‖Crear tarjeta desde la idea
+Criar card‖Create card‖Crear tarjeta
+Título do card‖Card title‖Título de la tarjeta
+Usuário avaliador‖Reviewer user‖Usuario evaluador
+Autor‖Author‖Autor
+Prazo‖Due date‖Plazo
+Prazo (opcional)‖Due date (optional)‖Plazo (opcional)
+Arraste para mover‖Drag to move‖Arrastre para mover
+⚠ atrasado‖⚠ overdue‖⚠ atrasado
+⏰ Prazo vencido‖⏰ Overdue‖⏰ Plazo vencido
+Mostrar arquivados‖Show archived‖Mostrar archivados
+Comentar... (@ para citar)‖Comment... (@ to mention)‖Comentar... (@ para mencionar)
+Comentar... (use @ para citar alguém)‖Comment... (use @ to mention someone)‖Comentar... (use @ para mencionar a alguien)
+PARA FAZER‖TO DO‖POR HACER
+EM PROGRESSO‖IN PROGRESS‖EN PROGRESO
+PARA AVALIAR‖TO REVIEW‖POR EVALUAR
+EM AVALIAÇÃO‖IN REVIEW‖EN EVALUACIÓN
+FINALIZADO‖DONE‖FINALIZADO
+Organize as ações de implantação em colunas e acompanhe o andamento de cada tarefa.‖Organize implementation actions in columns and track each task.‖Organice las acciones de implantación en columnas y siga cada tarea.
+Meta‖Goal‖Meta
+Nova meta‖New goal‖Nueva meta
+Previsão de conclusão‖Expected completion‖Previsión de conclusión
+Campanha (opcional): a meta mede as ideias implantadas da campanha‖Campaign (optional): the goal measures the campaign's implemented ideas‖Campaña (opcional): la meta mide las ideas implantadas de la campaña
+Quantidade de ideias a implantar‖Number of ideas to implement‖Cantidad de ideas a implantar
+Submetas (obrigatório ao menos uma, exceto em meta ligada a campanha)‖Subgoals (at least one required, except for campaign goals)‖Submetas (al menos una obligatoria, excepto en metas de campaña)
+Descrição da submeta‖Subgoal description‖Descripción de la submeta
+Sem responsável‖No owner‖Sin responsable
+Mostrar metas concluídas‖Show completed goals‖Mostrar metas concluidas
+Nenhuma meta ativa.‖No active goals.‖No hay metas activas.
+Meta cadastrada!‖Goal created!‖¡Meta creada!
+Meta concluída!‖Goal completed!‖¡Meta completada!
+Meta excluída!‖Goal deleted!‖¡Meta eliminada!
+Reportar problema‖Report a problem‖Reportar problema
+Nenhum problema reportado.‖No problems reported.‖No hay problemas reportados.
+Problema enviado!‖Problem sent!‖¡Problema enviado!
+Informe título e descrição.‖Enter title and description.‖Ingrese título y descripción.
+Finalizado‖Finished‖Finalizado
+Pendente‖Pending‖Pendiente
+Finalizar‖Finish‖Finalizar
+Reabrir‖Reopen‖Reabrir
+Nenhuma reclamação.‖No complaints.‖No hay reclamaciones.
+Questionário‖Quiz‖Cuestionario
+Marcar como lido‖Mark as read‖Marcar como leído
+Enviar respostas‖Submit answers‖Enviar respuestas
+Concluir curso‖Complete course‖Completar curso
+✔ Concluído‖✔ Completed‖✔ Completado
+Concluído‖Completed‖Completado
+Não concluído‖Not completed‖No completado
+Parabéns! Todas corretas.‖Congratulations! All correct.‖¡Felicidades! Todas correctas.
+Há respostas incorretas ou em branco. Refaça a prova.‖Some answers are wrong or blank. Retake the quiz.‖Hay respuestas incorrectas o en blanco. Repita la prueba.
+Curso concluído!‖Course completed!‖¡Curso completado!
+Design Thinking‖Design Thinking‖Design Thinking
+Startup Enxuta (Lean Startup)‖Lean Startup‖Startup Lean
+Cultura de Inovação‖Innovation Culture‖Cultura de Innovación
+Resolva problemas começando pelas pessoas.‖Solve problems starting with people.‖Resuelva problemas empezando por las personas.
+Aprenda rápido com experimentos pequenos.‖Learn fast with small experiments.‖Aprenda rápido con experimentos pequeños.
+Como criar um ambiente onde ideias prosperam.‖How to create an environment where ideas thrive.‖Cómo crear un entorno donde las ideas prosperen.
+Não foi possível salvar as alterações. Verifique a conexão.‖Could not save changes. Check your connection.‖No se pudieron guardar los cambios. Verifique la conexión.
+⚠ Não foi possível carregar os dados no momento.‖⚠ Could not load data right now.‖⚠ No se pudieron cargar los datos en este momento.
+Termos, Privacidade e LGPD‖Terms, Privacy and LGPD‖Términos, Privacidad y LGPD
+Termos de uso‖Terms of use‖Términos de uso
+Política de privacidade‖Privacy policy‖Política de privacidad
+Desenvolvido por‖Developed by‖Desarrollado por
+Todos os direitos reservados.‖All rights reserved.‖Todos los derechos reservados.
+Bem-vindo ao INSIGHT‖Welcome to INSIGHT‖Bienvenido a INSIGHT
+Cada ideia importa‖Every idea matters‖Cada idea importa
+Como ideias movem o mundo‖How ideas move the world‖Cómo las ideas mueven el mundo
+Acessar o INSIGHT‖Access INSIGHT‖Acceder a INSIGHT
+Por que usar o INSIGHT‖Why use INSIGHT‖Por qué usar INSIGHT
+Como funciona‖How it works‖Cómo funciona
+Proponha.‖Propose.‖Proponga.
+Engaje.‖Engage.‖Involucre.
+Avalie.‖Review.‖Evalúe.
+Implante.‖Implement.‖Implante.
+Sobre a compreaquidevs‖About compreaquidevs‖Sobre compreaquidevs
+Foco: campanhas direcionam as ideias para os temas que mais importam à empresa.‖Focus: campaigns steer ideas toward the themes that matter most to the company.‖Enfoque: las campañas dirigen las ideas hacia los temas que más importan a la empresa.
+Engajamento: pontuação e reconhecimento incentivam a participação contínua.‖Engagement: scores and recognition encourage ongoing participation.‖Compromiso: la puntuación y el reconocimiento incentivan la participación continua.
+Cultura de inovação: todos os colaboradores têm voz, independentemente do cargo.‖Innovation culture: every employee has a voice, regardless of role.‖Cultura de innovación: todos los colaboradores tienen voz, sin importar el cargo.
+Transparência: o status de cada ideia e o parecer do aprovador ficam registrados.‖Transparency: each idea's status and the approver's feedback are recorded.‖Transparencia: el estado de cada idea y la opinión del aprobador quedan registrados.
+Acompanhamento: indicadores mostram quantas ideias foram implantadas e quantas foram reprovadas.‖Tracking: indicators show how many ideas were implemented and rejected.‖Seguimiento: los indicadores muestran cuántas ideas fueron implantadas y rechazadas.
+Acompanhe indicadores de ideias e defina metas e submetas com responsáveis e prazos.‖Track idea indicators and set goals and subgoals with owners and deadlines.‖Siga los indicadores de ideas y defina metas y submetas con responsables y plazos.
+Feed de ideias, pontuação, campanhas, fluxo de avaliação com parecer, board kanban e gestão de usuários, tudo por empresa.‖Idea feed, ranking, campaigns, review flow with feedback, kanban board and user management, all per company.‖Feed de ideas, puntuación, campañas, flujo de evaluación con opinión, tablero kanban y gestión de usuarios, todo por empresa.
+Perfis de colaborador, aprovador e administrador, com acesso separado por empresa.‖Employee, approver and administrator profiles, with access separated by company.‖Perfiles de colaborador, aprobador y administrador, con acceso separado por empresa.
+Aprovadores analisam cada ideia, atualizam o status e deixam um parecer para o idealizador.‖Approvers review each idea, update the status and leave feedback for the author.‖Los aprobadores analizan cada idea, actualizan el estado y dejan una opinión para el autor.
+Os colegas curtem e comentam, contribuindo para o amadurecimento da proposta.‖Colleagues like and comment, helping the proposal mature.‖Los colegas dan me gusta y comentan, ayudando a madurar la propuesta.
+Todos acompanham as ideias da empresa, curtem e comentam para fortalecer as melhores propostas.‖Everyone follows the company's ideas, likes and comments to strengthen the best proposals.‖Todos siguen las ideas de la empresa, dan me gusta y comentan para fortalecer las mejores propuestas.
+O aprovador analisa a ideia, passa por avaliação inicial e de negócio e, se necessário, pede ajustes ao idealizador.‖The approver reviews the idea, goes through initial and business review and, if needed, asks the author for adjustments.‖El aprobador analiza la idea, pasa por evaluación inicial y de negocio y, si es necesario, pide ajustes al autor.
+Ideias aprovadas entram em implantação e, ao final, são marcadas como implantadas, com o resultado visível para todos.‖Approved ideas go into implementation and are finally marked as implemented, with the result visible to everyone.‖Las ideas aprobadas entran en implantación y al final se marcan como implantadas, con el resultado visible para todos.
+Quem propõe, curte e comenta ganha pontos e aparece no ranking geral, estimulando a participação.‖Whoever proposes, likes and comments earns points and appears in the overall ranking, encouraging participation.‖Quien propone, da me gusta y comenta gana puntos y aparece en el ranking general, estimulando la participación.
+LGPD – Lei Geral de Proteção de Dados‖LGPD – Brazilian General Data Protection Law‖LGPD – Ley General de Protección de Datos de Brasil
+O INSIGHT trata dados pessoais conforme a Lei nº 13.709/2018 (LGPD), com finalidade específica, adequação e necessidade.‖INSIGHT processes personal data under Law No. 13,709/2018 (LGPD), for specific purposes, adequacy and necessity.‖INSIGHT trata datos personales conforme a la Ley n.º 13.709/2018 (LGPD), con finalidad específica, adecuación y necesidad.
+Base legal:‖Legal basis:‖Base legal:
+execução do contrato com a empresa contratante e legítimo interesse na operação da plataforma.‖performance of the contract with the contracting company and legitimate interest in operating the platform.‖ejecución del contrato con la empresa contratante e interés legítimo en la operación de la plataforma.
+Direitos do titular:‖Data subject rights:‖Derechos del titular:
+Retenção e segurança:‖Retention and security:‖Retención y seguridad:
+os dados são mantidos enquanto a conta estiver ativa e protegidos por autenticação e isolamento por empresa.‖data is kept while the account is active and protected by authentication and per-company isolation.‖los datos se mantienen mientras la cuenta esté activa y protegidos por autenticación y aislamiento por empresa.
+Você pode solicitar acesso, correção ou exclusão dos seus dados ao administrador da empresa.‖You can request access, correction or deletion of your data from your company administrator.‖Puede solicitar acceso, corrección o eliminación de sus datos al administrador de la empresa.
+1. Aceitação‖1. Acceptance‖1. Aceptación
+2. Uso da plataforma‖2. Use of the platform‖2. Uso de la plataforma
+3. Conta‖3. Account‖3. Cuenta
+4. Propriedade das ideias‖4. Ownership of ideas‖4. Propiedad de las ideas
+5. Moderação‖5. Moderation‖5. Moderación
+6. Alterações‖6. Changes‖6. Cambios
+1. Dados coletados‖1. Data collected‖1. Datos recopilados
+2. Uso‖2. Use‖2. Uso
+3. Compartilhamento‖3. Sharing‖3. Compartición
+4. Segurança‖4. Security‖4. Seguridad
+5. Seus direitos‖5. Your rights‖5. Sus derechos
+6. Cookies e cache‖6. Cookies and cache‖6. Cookies y caché
+Ao usar o INSIGHT você concorda com estes termos.‖By using INSIGHT you agree to these terms.‖Al usar INSIGHT usted acepta estos términos.
+Os termos podem ser atualizados a qualquer momento.‖The terms may be updated at any time.‖Los términos pueden actualizarse en cualquier momento.
+Você é responsável pela confidencialidade da sua senha e pelas ações feitas em sua conta.‖You are responsible for the confidentiality of your password and actions taken in your account.‖Usted es responsable de la confidencialidad de su contraseña y de las acciones realizadas en su cuenta.
+Adotamos medidas para proteger as informações contra acesso indevido.‖We adopt measures to protect information against unauthorized access.‖Adoptamos medidas para proteger la información contra el acceso indebido.
+Os dados servem para operar a plataforma, calcular pontuações e permitir a avaliação das ideias.‖The data is used to operate the platform, calculate scores and allow ideas to be reviewed.‖Los datos sirven para operar la plataforma, calcular puntuaciones y permitir la evaluación de las ideas.
+não os divulgamos a terceiros‖we do not disclose it to third parties‖no los divulgamos a terceros
+~Autor:‖Author:‖Autor:
+~Aprovador:‖Approver:‖Aprobador:
+~Implantador:‖Implementer:‖Implementador:
+~Parceiros:‖Partners:‖Socios:
+~Campanha:‖Campaign:‖Campaña:
+~Conclusão:‖Completion:‖Conclusión:
+~Criado por‖Created by‖Creado por
+~Período:‖Period:‖Período:
+~Prioridade:‖Priority:‖Prioridad:
+~Prazo:‖Due:‖Plazo:
+~Avaliador:‖Reviewer:‖Evaluador:
+~Usuários:‖Users:‖Usuarios:
+~Grupos:‖Groups:‖Grupos:
+~Aberto em‖Opened on‖Abierto el
+~Concluído em‖Completed on‖Completado el
+~Solicitado em‖Requested on‖Solicitado el
+~Previsão de conclusão:‖Expected completion:‖Previsión de conclusión:
+~Responsável:‖Owner:‖Responsable:
+~Critério:‖Criteria:‖Criterio:
+~Criada por‖Created by‖Creada por
+~card(s)‖card(s)‖tarjeta(s)
+~usuário(s)‖user(s)‖usuario(s)
+~ideia(s)‖idea(s)‖idea(s)
+~Arquivado‖Archived‖Archivado
+~Mostrar arquivados‖Show archived‖Mostrar archivados
+A pessoa receberá um e-mail com um link para criar uma nova senha.‖The person will receive an email with a link to create a new password.‖La persona recibirá un correo con un enlace para crear una nueva contraseña.
+Acesso restrito ao superadmin.‖Restricted to the superadmin.‖Acceso restringido al superadmin.
+Nenhum colega disponível.‖No colleagues available.‖No hay colegas disponibles.
+. Apenas usuários da mesma empresa veem o conteúdo publicado.‖. Only users from the same company see the published content.‖. Solo los usuarios de la misma empresa ven el contenido publicado.
+Enviamos para‖We sent it to‖Enviamos a
+Guardamos os dados do usuário e‖We store the user's data and‖Guardamos los datos del usuario y
+~Aberto‖Open‖Abierto`;
+const TR = { en: {}, es: {} }, TRP = { en: [], es: [] };
+TR_RAW.split('\n').forEach(l => {
+  const q = l.split('‖'); if (q.length < 3) return;
+  let k = q[0].trim(); const parte = k[0] == '~'; if (parte) k = k.slice(1);
+  ['en', 'es'].forEach((lg, j) => { const v = q[j + 1].trim(); if (parte) TRP[lg].push([k, v]); else TR[lg][k] = v; });
+});
+['en', 'es'].forEach(lg => TRP[lg].sort((a, b) => b[0].length - a[0].length));
+function trText(str) {
+  if (LANG == 'pt' || !str) return str;
+  const m = str.match(/^(\s*)([\s\S]*?)(\s*)$/), core = m[2];
+  if (!core) return str;
+  const d = TR[LANG];
+  if (d[core] !== undefined) return m[1] + d[core] + m[3];
+  let out = core;
+  for (const [a, b] of TRP[LANG]) if (out.includes(a)) out = out.split(a).join(b);
+  return out == core ? str : m[1] + out + m[3];
+}
+const TR_SKIP = 'script,style,textarea,[data-notr]';
+function trAttr(el) {
+  if (!el || el.nodeType != 1) return;
+  ['placeholder', 'title'].forEach(a => { const v = el.getAttribute && el.getAttribute(a); if (v) { const nv = trText(v); if (nv !== v) el.setAttribute(a, nv); } });
+}
+function trNode(root) {
+  if (LANG == 'pt' || !root) return;
+  if (root.nodeType == 3) {
+    if (root.parentElement && root.parentElement.closest(TR_SKIP)) return;
+    const nv = trText(root.nodeValue); if (nv !== root.nodeValue) root.nodeValue = nv; return;
+  }
+  if (root.nodeType != 1) return;
+  trAttr(root); root.querySelectorAll('[placeholder],[title]').forEach(trAttr);
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let x;
+  while ((x = w.nextNode())) {
+    if (x.parentElement && x.parentElement.closest(TR_SKIP)) continue;
+    const nv = trText(x.nodeValue); if (nv !== x.nodeValue) x.nodeValue = nv;
+  }
+}
+const TR_OBS = { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'title'] };
+let trBusy = false;
+const trObserver = new MutationObserver(ms => {
+  if (trBusy) return; trBusy = true; trObserver.disconnect();
+  try { ms.forEach(m => { if (m.type == 'childList') m.addedNodes.forEach(trNode); else if (m.type == 'characterData') trNode(m.target); else trAttr(m.target); }); }
+  finally { trObserver.observe(document.documentElement, TR_OBS); trBusy = false; }
+});
+if (LANG != 'pt') { document.documentElement.lang = LANG; trNode(document.body); trObserver.observe(document.documentElement, TR_OBS); }
+const t = k => (I18N[LANG] || {})[k] || k;
+function applyTheme() { if (ME && lsGet('ins_theme') == 'light') document.documentElement.setAttribute('data-theme', 'light'); else document.documentElement.removeAttribute('data-theme'); }
+function setTheme(v) { lsSet('ins_theme', v); applyTheme(); }
+function setLang(v) { lsSet('ins_lang', v); location.reload(); }
 
 /* Só o e-mail fica salvo no navegador. A sessão (e o "lembrar login") é gerenciada pelo Firebase Authentication. */
 const savedLogin = (() => {
@@ -1067,6 +1581,7 @@ const savedLogin = (() => {
 const sessao = { save() { }, load() { return null; }, clear() { } };
 
 function renderLogin() {
+  document.documentElement.removeAttribute('data-theme');
   const saved = savedLogin.load() || { email: '', senha: '' };
   document.body.innerHTML = `
     <div class="login"><div class="box">
@@ -1079,14 +1594,80 @@ function renderLogin() {
       </div>
       <p class="msg" id="lm"></p>
       <button class="btn" style="width:100%" onclick="doLogin()">Entrar</button>
-      <!-- <p style="margin-top:12px"><a href="#" onclick="renderForgot();return false">Esqueci a senha</a></p> -->
-      <a class="cta" href="#empresa" target="_blank">ACESSE nossa página</a>
+      <p style="margin-top:12px"><a href="#" onclick="renderForgot();return false">Esqueci a senha</a></p>
+      <a class="cta plain" href="#empresa" target="_blank">ACESSE nossa página</a>
     </div></div>`;
 }
 
 /* Lê o perfil (empresa, perfil, ativo) do usuário autenticado e define a empresa da sessão. */
+function renderAdminLogin() {
+  document.body.innerHTML = `<div class="login"><div class="box" style="max-width:380px;margin:60px auto">
+    <h2 style="color:var(--g)">Painel Admin</h2><br>
+    <label>E-mail</label><input id="ae" type="email"><label>Senha</label><input id="ap" type="password" onkeydown="if(event.key=='Enter')adminLogin()">
+    <p class="msg" id="am"></p><button class="btn" style="width:100%" onclick="adminLogin()">Entrar</button><br><br>
+    <a style="cursor:pointer" onclick="history.replaceState(null,'',location.pathname);renderLogin()">‹ Voltar</a></div></div>`;
+}
+async function adminLogin() {
+  const m = $('#am'); m.textContent = '';
+  try {
+    await fb.auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    const c = await fb.auth.signInWithEmailAndPassword($('#ae').value.trim().toLowerCase(), $('#ap').value);
+    const pf = (await fb.db.ref('perfis/' + c.user.uid).get()).val();
+    if (!pf || pf.perfil != 'superadmin' || pf.ativo === false) { try { fb.auth.signOut(); } catch (e) { } return m.textContent = 'Acesso restrito ao superadmin.'; }
+    adminHome('painel');
+  } catch (e) { m.textContent = erroAuth(e); }
+}
+let ADM = { tab: 'painel', data: {} };
+const admList = (o, k) => toArray(o && o[k]) || [];
+async function shallowReq(path) {
+  const tk = await fb.auth.currentUser.getIdToken();
+  const r = await fetch(`${fb.db.app.options.databaseURL}/${path}.json?shallow=true&auth=${tk}`);
+  if (!r.ok) throw new Error(r.status);
+  return (await r.json()) || {};
+}
+async function adminHome(tab) {
+  ADM.tab = tab || ADM.tab;
+  document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
+  let ids = [], aviso = '';
+  try { ids = Object.keys(await shallowReq('empresas')); } catch (e) { aviso = 'Sem permissão para listar as empresas. Publique as regras do superadmin no Firebase.'; }
+  const cnt = async (id, tb) => { try { return Object.keys(await shallowReq(`empresas/${id}/${tb}`)).length; } catch (e) { return null; } };
+  const rd = async (id, tb) => { try { return toArray((await fb.db.ref(`empresas/${id}/${tb}`).get()).val()) || []; } catch (e) { return null; } };
+  const nomeEmp = async id => { try { const i = (await fb.db.ref(`empresas/${id}/info`).get()).val(); return (i && i.nome) || id; } catch (e) { return id; } };
+  const v = x => x == null ? '—' : x;
+  let corpo;
+  if (ADM.tab == 'painel') {
+    const rows = await Promise.all(ids.map(async id => {
+      const [nome, ide, usu, cards, metas] = await Promise.all([nomeEmp(id), cnt(id, 'ideias'), cnt(id, 'usuarios'), rd(id, 'cards'), rd(id, 'metas')]);
+      const bs = cards && cards.filter(b => b && Array.isArray(b.aplicacaocard));
+      return `<tr><td>${esc(nome)}</td><td>${v(ide)}</td><td>${v(usu)}</td><td>${bs ? bs.length : '—'}</td><td>${bs ? bs.reduce((a, b) => a + b.aplicacaocard.length, 0) : '—'}</td><td>${metas ? metas.length : '—'}</td><td>${metas ? metas.reduce((a, m) => a + (toArray(m && m.submeta) || []).length, 0) : '—'}</td></tr>`;
+    }));
+    corpo = `<h2>Visão por empresa</h2>${aviso ? `<p class="msg">${aviso}</p>` : ''}<p class="meta">Contagens apenas; o conteúdo das ideias não é lido.</p><br><div class="box scr"><table class="tbl"><tr><th>Empresa</th><th>Ideias</th><th>Usuários</th><th>Boards</th><th>Cards</th><th>Metas</th><th>Submetas</th></tr>${rows.join('') || '<tr><td colspan="7">Sem dados.</td></tr>'}</table></div>`;
+  } else {
+    const l = (await Promise.all(ids.map(async id => ({ id, nome: await nomeEmp(id), lista: await rd(id, 'reclamacoes') || [] }))))
+      .flatMap(e => e.lista.map(r => ({ ...r, eid: e.id, enome: e.nome }))).sort((a, b) => b.id - a.id);
+    corpo = `<h2>Reclamações</h2>${aviso ? `<p class="msg">${aviso}</p>` : ''}<br><div class="box scr"><table class="tbl"><tr><th>Empresa</th><th>Autor</th><th>Título</th><th>Descrição</th><th>Abertura</th><th>Conclusão</th><th>Status</th><th></th></tr>
+      ${l.map(r => `<tr><td>${esc(r.enome)}</td><td>${esc(r.autor)}</td><td>${esc(r.titulo)}</td><td>${esc(r.descricao)}</td><td>${esc(r.dataabertura)}</td><td>${esc(r.dataconclusao || '—')}</td><td>${r.status == 'finalizado' ? 'Finalizado' : 'Pendente'}</td>
+        <td><button class="btn s ${r.status == 'finalizado' ? 'o' : ''}" onclick="adminStatus('${esc(r.eid)}',${r.id})">${r.status == 'finalizado' ? 'Reabrir' : 'Finalizar'}</button></td></tr>`).join('') || '<tr><td colspan="8">Nenhuma reclamação.</td></tr>'}</table></div>`;
+  }
+  document.body.innerHTML = `<header style="flex-wrap:wrap;gap:8px"><b style="color:var(--g)">Painel Superadmin</b>
+    <div><button class="btn s ${ADM.tab == 'painel' ? '' : 'o'}" onclick="adminHome('painel')">Painel</button>
+    <button class="btn s ${ADM.tab == 'reclamacoes' ? '' : 'o'}" onclick="adminHome('reclamacoes')">Reclamações</button>
+    <button class="btn s r" onclick="adminSair()">Sair</button></div></header><div class="wrap one"><div>${corpo}</div></div>`;
+}
+async function adminStatus(eid, id) {
+  try {
+    const ref = fb.db.ref('empresas/' + eid + '/reclamacoes');
+    const lista = toArray((await ref.get()).val()) || [];
+    const r = lista.find(x => x && x.id == id); if (!r) return;
+    if (r.status == 'finalizado') { r.status = 'pendente'; r.dataconclusao = ''; } else { r.status = 'finalizado'; r.dataconclusao = now(); }
+    await ref.set(limpo(lista));
+  } catch (e) { alert('Não foi possível atualizar a reclamação.'); }
+  adminHome('reclamacoes');
+}
+function adminSair() { try { fb.auth.signOut(); } catch (e) { } EMP_ID = ''; ME = null; if (location.hash == '#admin') renderAdminLogin(); else renderLogin(); }
 async function montarSessao(fbUser) {
   const perfil = (await fb.db.ref('perfis/' + fbUser.uid).get()).val();
+  if (perfil && perfil.perfil == 'superadmin') { limparSegredos(); return { erro: 'E-mail ou senha incorretos.' }; }
   if (!perfil || !perfil.empresa) { limparSegredos(); return { erro: 'Usuário sem empresa vinculada. Fale com o administrador.' }; }
   if (perfil.ativo === false) { limparSegredos(); return { erro: 'Usuário inativo. Fale com o administrador.' }; }
   EMP_ID = String(perfil.empresa).trim().toLowerCase();
@@ -1244,7 +1825,127 @@ async function requestReset() {
 let VIEW = 'home';
 let notifTimer;
 let visible = PAGE_SIZE;
-const VIEWS = { home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
+
+
+const CURSOS = [
+
+ { id: 'dt', titulo: 'Design Thinking', resumo: 'Resolva problemas começando pelas pessoas.',
+
+   texto: ['Design Thinking é uma abordagem centrada no ser humano para resolver problemas complexos, combinando empatia, criatividade e experimentação.', 'Ele é organizado em etapas: empatizar, definir, idear, prototipar e testar. Elas não são rígidas: você pode voltar a uma etapa anterior sempre que aprender algo novo.'],
+
+   acc: [['Empatizar e definir', 'Entreviste e observe os usuários. Depois, resuma o problema em uma frase clara, chamada declaração de problema.'], ['Idear e prototipar', 'Gere muitas ideias sem julgar, escolha as mais promissoras e construa versões simples e baratas para testar.'], ['Testar', 'Mostre o protótipo para usuários reais, colete feedback e melhore. Errar cedo e barato é parte do método.']],
+
+   quiz: [['O Design Thinking é centrado em:', ['Tecnologia', 'Pessoas', 'Custos'], 1], ['Qual etapa vem logo após "empatizar"?', ['Definir', 'Testar', 'Lançar'], 0], ['Na etapa de idear, o ideal é:', ['Julgar cada ideia', 'Gerar muitas ideias', 'Escolher só uma'], 1], ['Protótipos devem ser:', ['Perfeitos', 'Simples e baratos', 'Secretos'], 1], ['As etapas do método são:', ['Rígidas e lineares', 'Flexíveis e repetíveis', 'Opcionais'], 1]] },
+
+ { id: 'ls', titulo: 'Startup Enxuta (Lean Startup)', resumo: 'Aprenda rápido com experimentos pequenos.',
+
+   texto: ['Lean Startup, popularizado por Eric Ries, propõe validar hipóteses com o menor esforço possível antes de investir pesado em uma ideia.', 'O ciclo central é construir, medir e aprender. O objetivo é descobrir rapidamente o que os clientes realmente querem.'],
+
+   acc: [['MVP', 'O Produto Mínimo Viável é a versão mais simples que permite testar uma hipótese com clientes reais.'], ['Métricas acionáveis', 'Prefira métricas que ajudem a decidir (conversão, retenção) a métricas de vaidade (curtidas, visitas).'], ['Pivotar', 'Se os dados mostram que a hipótese não se sustenta, mude a direção mantendo o aprendizado obtido.']],
+
+   quiz: [['O ciclo central do Lean Startup é:', ['Planejar, executar, entregar', 'Construir, medir, aprender', 'Vender, cobrar, expandir'], 1], ['MVP significa:', ['Produto Mínimo Viável', 'Maior Valor do Projeto', 'Modelo Mais Vendido'], 0], ['Qual é uma métrica acionável?', ['Número de visitas', 'Taxa de conversão', 'Curtidas'], 1], ['Pivotar é:', ['Desistir de tudo', 'Mudar a direção com base em dados', 'Ignorar o cliente'], 1], ['O objetivo principal é:', ['Validar hipóteses rápido', 'Escrever planos longos', 'Reduzir equipe'], 0]] },
+
+ { id: 'cu', titulo: 'Cultura de Inovação', resumo: 'Como criar um ambiente onde ideias prosperam.',
+
+   texto: ['Inovar não depende apenas de talento individual: depende de um ambiente que incentive a experimentação e proteja quem propõe novas ideias.', 'Empresas inovadoras valorizam segurança psicológica, diversidade de pontos de vista e aprendizado com falhas.'],
+
+   acc: [['Segurança psicológica', 'As pessoas precisam sentir que podem sugerir e errar sem punição ou ridicularização.'], ['Diversidade', 'Times com experiências diferentes enxergam problemas por ângulos distintos e geram soluções mais ricas.'], ['Reconhecimento', 'Celebrar tentativas, e não só sucessos, mantém o fluxo de ideias vivo.']],
+
+   quiz: [['Inovação depende de:', ['Só de talento individual', 'Ambiente que incentiva experimentar', 'Só de orçamento'], 1], ['Segurança psicológica significa:', ['Poder propor e errar sem punição', 'Ter segurança patrimonial', 'Evitar riscos'], 0], ['Times diversos tendem a:', ['Pensar igual', 'Gerar soluções mais ricas', 'Ser mais lentos sempre'], 1], ['Como tratar falhas?', ['Esconder', 'Punir', 'Aprender com elas'], 2], ['Reconhecer tentativas:', ['Mantém ideias fluindo', 'Atrapalha', 'É irrelevante'], 0]] }
+
+];
+
+const cursoKey = () => 'ins_cursos_' + ME.email;
+
+const cursosFeitos = () => { try { return JSON.parse(lsGet(cursoKey()) || '[]'); } catch (e) { return []; } };
+
+let CURSO = null;
+
+function viewCursos() {
+
+  const f = cursosFeitos();
+
+  return `<div class="wrap one"><div class="box"><h2>${t('Aprendendo a inovar')}</h2><br>
+
+    ${CURSOS.map(c => `<div class="box crs" onclick="abrirCurso('${c.id}')"><h3>${esc(c.titulo)}</h3><p class="meta">${esc(c.resumo)}</p><span class="${f.includes(c.id) ? 'okb' : 'meta'}">${f.includes(c.id) ? '✔ Concluído' : 'Não concluído'}</span></div>`).join('')}</div></div>`;
+
+}
+
+function abrirCurso(id) { CURSO = id; go('curso'); window.scrollTo(0, 0); }
+
+function viewCurso() {
+
+  const c = CURSOS.find(x => x.id == CURSO); if (!c) return viewCursos();
+
+  const feito = cursosFeitos().includes(c.id);
+
+  return `<div class="wrap one"><div class="box"><a style="cursor:pointer" onclick="go('cursos')">‹ Voltar</a><h2>${esc(c.titulo)}</h2> ${feito ? '<span class="okb">✔ Concluído</span>' : ''}<br>
+
+    ${c.texto.map(x => `<p style="margin:10px 0">${esc(x)}</p>`).join('')}
+
+    ${c.acc.map(a => `<details class="acc"><summary>${esc(a[0])}</summary><p style="margin-top:6px">${esc(a[1])}</p></details>`).join('')}
+
+    <label style="display:flex;gap:6px;align-items:center;margin:14px 0"><input type="checkbox" id="lido" style="width:auto;margin:0" onchange="$('#quiz').style.display=this.checked?'block':'none'">Marcar como lido</label>
+
+    <div id="quiz" style="display:none"><h3 style="color:var(--g)">Questionário</h3>
+
+      ${c.quiz.map((q, k) => `<div class="q"><b>${k + 1}. ${esc(q[0])}</b>${q[1].map((o, j) => `<label><input type="radio" name="q${k}" value="${j}">${esc(o)}</label>`).join('')}</div>`).join('')}
+
+      <p class="msg" id="qm"></p>
+
+      <button class="btn" onclick="corrigirQuiz()">Enviar respostas</button>
+
+      <button class="btn" id="qok" style="display:none" onclick="concluirCurso()">Concluir curso</button>
+
+    </div></div></div>`;
+
+}
+
+function corrigirQuiz() {
+
+  const c = CURSOS.find(x => x.id == CURSO);
+
+  const ok = c.quiz.every((q, k) => { const r = document.querySelector(`input[name=q${k}]:checked`); return r && +r.value == q[2]; });
+
+  const m = $('#qm');
+
+  if (ok) { m.style.color = 'var(--g)'; m.textContent = 'Parabéns! Todas corretas.'; $('#qok').style.display = ''; }
+
+  else { document.querySelectorAll('#quiz input[type=radio]').forEach(r => r.checked = false); m.style.color = ''; m.textContent = 'Há respostas incorretas ou em branco. Refaça a prova.'; $('#qok').style.display = 'none'; }
+
+}
+
+function concluirCurso() {
+
+  const f = cursosFeitos(); if (!f.includes(CURSO)) f.push(CURSO);
+
+  lsSet(cursoKey(), JSON.stringify(f)); showToast('Curso concluído!'); go('cursos');
+
+}
+
+function viewProblemas() {
+  const l = (DB.reclamacoes || []).filter(r => r.empresa == ME.empresa).sort((a, b) => b.id - a.id);
+  return `<div class="wrap one"><div><h2>${t('Reportar problema')}</h2><br>
+    <button class="btn" onclick="openProblemForm()">＋ Adicionar</button><button class="btn s o" onclick="refreshData().then(render)" style="margin-left:8px">↻ Atualizar</button><br><br>
+    ${l.map(r => `<div class="box idea"><h3>${esc(r.titulo)} <span class="badge ${r.status == 'finalizado' ? 's-implantada' : 's-implantacao'}">${r.status == 'finalizado' ? 'Finalizado' : 'Pendente'}</span></h3>
+      <p>${esc(r.descricao)}</p><div class="meta">Aberto em ${esc(r.dataabertura)}${r.dataconclusao ? ' · Concluído em ' + esc(r.dataconclusao) : ''}</div></div>`).join('') || '<div class="box">Nenhum problema reportado.</div>'}</div></div>`;
+}
+function openProblemForm() {
+  openModal(`<h3>Reportar problema</h3><br><label>Título</label><input id="rp1"><label>Descrição</label><textarea id="rp2" rows="5"></textarea>
+    <p class="msg" id="rpm"></p><button class="btn" onclick="saveProblem()">Enviar</button><button class="btn r" onclick="closeM()">Cancelar</button>`);
+}
+function saveProblem() {
+  const titulo = $('#rp1').value.trim(), descricao = $('#rp2').value.trim();
+  if (!titulo || !descricao) return $('#rpm').textContent = 'Informe título e descrição.';
+  DB.reclamacoes.push({ id: Date.now(), empresa: ME.empresa, autor: ME.email, titulo, descricao, dataabertura: now(), dataconclusao: '', status: 'pendente' });
+  save('reclamacoes'); closeM(); render(); showToast('Problema enviado!');
+}
+function viewAvaliar() {
+  const l = byNewest(pendentesAvaliar());
+  return `<div class="wrap one"><div><h2>${t('Avaliar ideias')}</h2><br>${l.map(i => ideaCard(i, true)).join('') || '<div class="box">Nenhuma ideia aguardando sua avaliação.</div>'}</div></div>`;
+}
+function viewScore() { return `<div class="box" id="rankBox">${rankingInner(0)}</div>`; }
+const VIEWS = { avaliar: viewAvaliar, problemas: viewProblemas, cursos: viewCursos, curso: viewCurso, score: viewScore, home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
                 usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, board: viewBoard, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals, indicadores: viewIndicadores };
 
 async function startApp() {
@@ -1263,29 +1964,33 @@ async function startApp() {
       <div class="menu">
         <button class="btn" id="optbtn" onclick="$('.drop').classList.toggle('on')">☰</button>
         <div class="drop">
-          <a onclick="go('home')">Home</a>
-          <a onclick="go('perfil')">Meu perfil</a>
-          <a onclick="go('minhas')">Minhas ideias</a>
+          <a onclick="go('home')">${t('Home')}</a>
+          <a onclick="go('score')">${t('Score')}</a>
+          <a onclick="go('perfil')">${t('Meu perfil')}</a>
+          <a onclick="go('minhas')">${t('Minhas ideias')}</a>
           <a onclick="go('notificacoes')" id="mnuNotifs">Notificações</a>
-          <a onclick="go('metas')">Metas</a>
-          ${isApprover() ? `<a onclick="go('todas')">Todas as ideias</a><a onclick="go('programas')">Programa de ideias</a><a onclick="go('indicadores')">Indicadores</a>` : ''}
-          ${isAdmin() ? `<a onclick="go('usuarios')">Gestão de usuários</a>` : ''}
-          <a onclick="go('kanban')">Aplicação</a>
-          <a href="#termos" target="_blank">Termos de uso</a>
-          <a href="#privacidade" target="_blank">Política de privacidade</a>
-          <a onclick="logout()">Sair</a>
+          <a onclick="go('metas')">${t('Metas')}</a>
+          ${isApprover() ? `<a onclick="go('todas')">${t('Todas as ideias')}</a><a onclick="go('programas')">${t('Programa de ideias')}</a><a onclick="go('indicadores')">${t('Indicadores')}</a>` : ''}
+          ${isAdmin() ? `<a onclick="go('usuarios')">${t('Gestão de usuários')}</a>` : ''}
+          <a onclick="go('kanban')">${t('Aplicação')}</a>
+          <a onclick="go('cursos')">${t('Aprendendo a inovar')}</a>
+          ${isApprover() ? `<a onclick="go('avaliar')">${t('Avaliar ideias')}${pendentesAvaliar().length ? ' (' + pendentesAvaliar().length + ')' : ''}</a>` : ''}
+          ${isApprover() ? `<a onclick="go('problemas')">${t('Reportar problema')}</a>` : ''}
+          <a onclick="logout()">${t('Sair')}</a>
         </div>
       </div>
     </header>
     <main id="main"></main>
+    <div id="appFoot"></div>
     <div class="fab"><button class="btn" onclick="openIdeaForm()">＋ Criar ideia</button></div>`;
+  applyTheme();
   go('home');
   checkPrazos();
   clearInterval(notifTimer);
   notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); checkPrazos(); }, 60*60000);
 }
 
-const FEED_VIEWS = ['home', 'minhas', 'todas', 'kanban', 'board', 'metas', 'indicadores'];
+const FEED_VIEWS = ['home', 'avaliar', 'score', 'minhas', 'todas', 'kanban', 'board', 'metas', 'indicadores'];
 const typing = () => /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
 
 async function syncFeed() {
@@ -1304,6 +2009,8 @@ function go(view) {
 function render() {
   document.querySelector('.drop')?.classList.remove('on');
   $('#main').innerHTML = VIEWS[VIEW]();
+  const af = $('#appFoot'); if (af) af.innerHTML = VIEW == 'home' ? footerHtml() : '';
+  if (VIEW == 'board') window.scrollTo(0, 0);
   if (VIEW == 'home') startCarousel();
   $('.fab').style.display = ['kanban', 'board'].includes(VIEW) ? 'none' : '';
   updateMenuBadge();
@@ -1421,14 +2128,14 @@ function ideaCard(i, full) {
 
   const isOwner = ME.email == i.emailusuario;
   const canAdjust = full && isOwner && ['rascunho', 'aguardando resposta do idealizador'].includes(i.status);
-  const canEval = full && isApprover() && STATUS_EDITAVEIS.includes(i.status);
+  const canEval = full && souAvaliador(i) && STATUS_EDITAVEIS.includes(i.status);
   const atrasada = full && ideaAtrasada(i);
   const cardBoard = full ? cardDaIdeia(i) : null;
-  const canToCard = full && isApprover() && i.status == 'em implantação' && !cardBoard;
+  const canToCard = full && souAvaliador(i) && i.status == 'em implantação' && !cardBoard;
   const coaut = (i.coautores || []).length ? ` · Coautores: ${i.coautores.map(e => esc(getUser(e).nome)).join(', ')}` : '';
 
   const details = full ? ` · Campanha: ${esc(i.programaideia)} · Benefício: ${esc(i.beneficio)} · ${i.data}
-      · Conclusão: ${i.dataconclusao || '-'} · Aprovador: ${esc(getUser(i.emailaprovador).nome)}${i.privada ? ' · 🔒 privada' : ''}` : '';
+      · Conclusão: ${i.dataconclusao || '-'} · Aprovador: ${esc(getUser(i.emailaprovador).nome)}${i.emailimplantador ? ' · Implantador: ' + esc(getUser(i.emailimplantador).nome) : ''}${i.parceiros ? ' · Parceiros: ' + esc(i.parceiros) : ''}${i.privada ? ' · 🔒 privada' : ''}` : '';
 
   return `
   <div class="box idea${atrasada ? ' late' : ''}">
@@ -1439,8 +2146,8 @@ function ideaCard(i, full) {
     ${full && i.parecer ? `<div class="cm"><b>Parecer:</b> ${esc(i.parecer)}</div>` : ''}
     ${full ? historicoHtml(i) : ''}
     <div class="act">
-      <button class="${liked ? 'on' : ''}" onclick="toggleLike(${i.id})">👍 ${likes.length}</button>
-      <button onclick="document.getElementById('c${i.id}').focus()">💬 ${comments.length}</button>
+      <button class="${liked ? 'on' : ''}" onclick="toggleLike(${i.id})"><svg class="ico" viewBox="0 0 24 24"><path d="M7 11v9H4v-9h3zm0 0l4-8c1.5 0 2.5 1 2.2 2.5L12.5 9H19a2 2 0 012 2.3l-1.2 7a2 2 0 01-2 1.7H7"/></svg>${likes.length}</button>
+      <button onclick="document.getElementById('c${i.id}').focus()"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/></svg>${comments.length}</button>
       ${canAdjust ? `<button onclick="openIdeaForm(${i.id})">✏️ Ajustar</button>` : ''}
       ${canEval ? `<button onclick="openEvalForm(${i.id})">🛠 Avaliar</button>` : ''}
       ${canToCard ? `<button onclick="openIdeaToCard(${i.id})">📋 Criar card</button>` : ''}
@@ -1488,7 +2195,8 @@ function scoreRanking() {
   }).sort((a, b) => b.pontos - a.pontos);
 }
 
-function rankingInner() {
+function rankingInner(limit) {
+  if (limit === undefined) limit = (VIEW == 'home') ? 8 : 0;
   const progs = companyPrograms();
   const titulo = RANK.modo == 'mes' ? 'Ranking do mês' : RANK.modo == 'campanha' ? 'Ranking da campanha' : 'Score geral';
   return `
@@ -1499,8 +2207,9 @@ function rankingInner() {
       <option value="campanha" ${RANK.modo == 'campanha' ? 'selected' : ''}>Por campanha</option>
     </select>
     ${RANK.modo == 'mes' ? `<input type="month" value="${esc(RANK.mes)}" onchange="setRank('mes',this.value)">` : ''}
+    ${VIEW == 'home' ? `<a style="cursor:pointer;text-decoration:underline" onclick="go('score')">Ver score completo</a>` : ''}
     ${RANK.modo == 'campanha' ? `<select onchange="setRank('campanha',this.value)">${progs.map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == RANK.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('') || '<option value="">Nenhuma campanha</option>'}</select>` : ''}
-    ${scoreRanking().map(s => `<div class="sc"><div class="av">${esc(s.u.nome.slice(0, 2).toUpperCase())}</div><span>${esc(s.u.nome)} <small>${selosIcones(s.u.email)}</small></span><b>${s.pontos}</b></div>`).join('')}`;
+    ${(limit ? scoreRanking().slice(0, limit) : scoreRanking()).map(s => `<div class="sc"><div class="av">${esc(s.u.nome.slice(0, 2).toUpperCase())}</div><span>${esc(s.u.nome)} <small>${selosIcones(s.u.email)}</small></span><b>${s.pontos}</b></div>`).join('')}`;
 }
 
 function setRank(campo, valor) {
@@ -1781,13 +2490,13 @@ function ideiasSimilares(titulo, idAtual) {
 function showSimilar(idAtual) {
   const el = $('#fdup'); if (!el) return;
   const lista = ideiasSimilares($('#f1').value, idAtual);
-  el.innerHTML = lista.length ? `<div class="dup"><b>⚠ Ideias parecidas já cadastradas:</b>
+  el.innerHTML = lista.length ? `<div class="dup"><b><svg class="ai" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>IA analisou: ideias parecidas já cadastradas</b>
     ${lista.map(i => `<div>• ${esc(i.titulo)} <small>(${esc(i.status)} · ${esc(getUser(i.emailusuario).nome)})</small></div>`).join('')}</div>` : '';
 }
 
 function openIdeaForm(id) {
   const i = DB.ideias.find(x => x.id == id) || {};
-  const aprovadores = companyUsers().filter(u => u.perfil == 'aprovador');
+  const aprovadores = companyUsers().filter(u => u.ativo && u.perfil != 'usuario_comum');
   const dono = i.emailusuario || ME.email;
   const selCo = e => (i.coautores || []).some(x => sameEmail(x, e));
   const colegas = companyUsers().filter(u => !sameEmail(u.email, dono) && (u.ativo || selCo(u.email)));
@@ -1872,7 +2581,14 @@ function openEvalForm(id) {
   const i = DB.ideias.find(x => x.id == id);
   openModal(`
     <h3>Avaliar / Ajustar Status: ${esc(i.titulo)}</h3><br>
-    <label>Status</label><select id="e1">${optionList(STATUS, i.status)}</select>
+    <label>Aprovador da ideia</label><select id="e3">${companyUsers().filter(u => u.ativo && u.perfil != 'usuario_comum').map(u => `<option value="${esc(u.email)}" ${sameEmail(u.email, i.emailaprovador) ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>
+    <label>Status</label><select id="e1" onchange="$('#e4w').style.display=this.value=='em implantação'?'':'none'">${FLUXOS[fluxoDe(i)].map(x => { const ok = statusPermitido(i.status, x, fluxoDe(i)); return `<option value="${esc(x)}" ${x == i.status ? 'selected' : ''} ${ok ? '' : 'disabled style="color:#9e9e9e"'}>${esc(x)}${ok ? '' : ' (indisponível)'}</option>`; }).join('')}</select>
+    <div id="e4w" style="display:${i.status == 'em implantação' ? '' : 'none'}">
+      <label>Informar um implantador</label>
+      <select id="e4"><option value="">— sem implantador —</option>${companyUsers().filter(u => u.ativo && u.perfil != 'usuario_comum').map(u => `<option value="${esc(u.email)}" ${sameEmail(u.email, i.emailimplantador) ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>
+      <label>Parceiros (outra empresa que ajudará na implantação)</label>
+      <input id="e5" value="${esc(i.parceiros || '')}" placeholder="Nome do parceiro">
+    </div>
     <label>Parecer para o idealizador</label><textarea id="e2" rows="4">${esc(i.parecer)}</textarea>
     <button class="btn" onclick="saveEval(${id})">Salvar Alterações</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
@@ -1883,8 +2599,20 @@ async function saveEval(id) {
   const statusAntigo = i.status;
   const parecerAntigo = i.parecer;
 
+  if (!statusPermitido(statusAntigo, $('#e1').value, fluxoDe(i))) return showToast('Transição de status não permitida.', 'warning');
   i.status = $('#e1').value;
   i.parecer = $('#e2').value;
+  const novoAp = $('#e3').value;
+  if (novoAp && !sameEmail(novoAp, i.emailaprovador)) {
+    pushNotification({ tipo: 'novo_aprovador', destinoEmail: novoAp, titulo: 'Você é o novo aprovador de uma ideia', mensagem: `${ME.nome} definiu você como aprovador da ideia "${i.titulo}".`, idideia: i.id });
+    i.emailaprovador = novoAp;
+  }
+  if (i.status == 'em implantação') {
+    const novo = $('#e4').value;
+    if (novo && !sameEmail(novo, i.emailimplantador) && !sameEmail(novo, ME.email))
+      pushNotification({ tipo: 'implantador', destinoEmail: novo, titulo: 'Você é implantador de uma ideia', mensagem: `Você foi indicado como implantador da ideia "${i.titulo}".`, idideia: i.id });
+    i.emailimplantador = novo; i.parceiros = $('#e5').value.trim();
+  }
   if (['implantada', 'reprovada'].includes(i.status)) i.dataconclusao = now();
 
   if (statusAntigo !== i.status || parecerAntigo !== i.parecer) {
@@ -2023,11 +2751,15 @@ function viewProfile() {
     <label>E-mail</label><input readonly value="${esc(ME.email)}">
     <label>Data de nascimento</label><input readonly value="${esc(formatDate(ME.datanascimento || ME.nascimento || ''))}">
     ${conquistasHtml(ME.email)}
-    <!-- <h3 style="color:var(--g)">Alterar senha</h3><br> -->
-    <!-- <label>Senha atual</label><input type="password" id="p1"> -->
-    <!-- <label>Nova senha</label><input type="password" id="p2"> -->
+    <h3 style="color:var(--g)">${t('Alterar senha')}</h3><br>
+    <label>${t('Senha atual')}</label><input type="password" id="p1">
+    <label>${t('Nova senha')}</label><input type="password" id="p2">
     <p class="msg" id="pm"></p>
-    <!-- <button class="btn" id="pbtn" onclick="changePassword()">Alterar senha</button> -->
+    <button class="btn" id="pbtn" onclick="changePassword()">${t('Alterar senha')}</button><br><br>
+    <label>${t('Tema')}</label>
+    <select onchange="setTheme(this.value)"><option value="dark">Padrão (escuro)</option><option value="light" ${lsGet('ins_theme') == 'light' ? 'selected' : ''}>Fundo branco</option></select>
+    <label>${t('Idioma')}</label>
+    <select onchange="setLang(this.value)"><option value="pt">Português</option><option value="en" ${LANG == 'en' ? 'selected' : ''}>English</option><option value="es" ${LANG == 'es' ? 'selected' : ''}>Español</option></select>
   </div></div>`;
 }
 function formatDate(s) {
@@ -2067,6 +2799,9 @@ function openProgramForm(nome = '') {
     <input id="g1" value="${esc(p.programaideia || '')}" placeholder="Digite o título da campanha">
     <label>Descrição</label>
     <textarea id="g2" rows="4" placeholder="Digite a descrição">${esc(p.descricao || '')}</textarea>
+    <label>Fluxo da campanha</label>
+    <select id="g6" onchange="$('#g6d').textContent=fluxoDesc(this.value)"><option value="simples" ${p.fluxo != 'complexo' ? 'selected' : ''}>Simples</option><option value="complexo" ${p.fluxo == 'complexo' ? 'selected' : ''}>Complexo</option></select>
+    <p class="fdesc" id="g6d">${fluxoDesc(p.fluxo == 'complexo' ? 'complexo' : 'simples')}</p>
     <label>Critério</label>
     <textarea id="g3" rows="2" placeholder="Digite o critério da campanha">${esc(p.criterio || '')}</textarea>
     <div class="filtros">
@@ -2083,7 +2818,7 @@ function saveProgram(antigo) {
   const titulo = $('#g1').value.trim();
   const descricao = $('#g2').value.trim();
   const criterio = $('#g3').value.trim();
-  const inicio = $('#g4').value, fim = $('#g5').value;
+  const inicio = $('#g4').value, fim = $('#g5').value, fluxo = $('#g6').value;
   if (!titulo) return $('#gm').textContent = 'O título é obrigatório.';
   if (inicio && fim && fim < inicio) return $('#gm').textContent = 'O fim não pode ser anterior ao início.';
 
@@ -2093,7 +2828,7 @@ function saveProgram(antigo) {
       companyIdeas().filter(i => i.programaideia == antigo).forEach(i => i.programaideia = titulo);
       save('ideias');
     }
-    Object.assign(p, { programaideia: titulo, descricao, criterio, inicio, fim });
+    Object.assign(p, { programaideia: titulo, descricao, criterio, inicio, fim, fluxo });
     save('programas');
   } else {
     DB.programas.push({
@@ -2103,6 +2838,7 @@ function saveProgram(antigo) {
       criterio,
       inicio,
       fim,
+      fluxo,
       emailautor: ME.email
     });
     save('programas');
@@ -2130,19 +2866,57 @@ function deleteProgram(nome) {
 
 /* ============================ 10. USUÁRIOS ============================== */
 function viewUsers() {
+  const gr = companyGroups();
   return `
   <div class="wrap one"><div>
-    <h2>Gestão de usuários</h2><br>
+    <h2>${t('Gestão de usuários')}</h2><br>
+    <button class="btn" onclick="openGroupForm()">＋ ${t('Criar grupo')}</button><br><br>
+    ${gr.length ? `<div class="box"><h3 style="color:var(--g)">Grupos</h3>${gr.map(g => `<div class="row" style="align-items:center;margin-top:8px"><div><b>${esc(g.nome)}</b><div class="meta">${(g.membros || []).map(e => esc(getUser(e).nome)).join(', ')}</div></div><button class="btn s r" style="margin-left:auto" onclick="deleteGroup(${g.id})">Excluir</button></div>`).join('')}</div>` : ''}
     ${companyUsers().map(u => `
       <div class="box sc">
         <div class="av">${esc(u.nome.slice(0, 2).toUpperCase())}</div>
-        <div>${esc(u.nome)}<div class="meta">${esc(u.email)} ·${u.perfil}</div></div>
-        <label style="margin-left:auto">
+        <div>${esc(u.nome)}<div class="meta">${esc(u.email)} · ${u.perfil}</div>
+          <div class="meta">Grupos: ${userGroups(u.email).map(g => esc(g.nome)).join(', ') || '—'}</div></div>
+        <label class="inat">
           <input type="checkbox" ${u.ativo ? '' : 'checked'} ${u.email == ME.email ? 'disabled' : ''}
                  onchange="setInactive('${u.email}',this.checked)">Inativo
         </label>
       </div>`).join('')}
   </div></div>`;
+}
+function openGroupForm() {
+  openModal(`
+    <h3>${t('Criar grupo')}</h3><br>
+    <label>Nome do grupo</label><input id="gp1">
+    <label>Usuários do grupo</label>
+    <div id="gpusers" style="max-height:220px;overflow:auto;margin-bottom:10px">
+      ${companyUsers().filter(u => u.ativo).map(u => `<label style="display:flex;align-items:center;color:var(--fg)"><input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}">${esc(u.nome)}</label>`).join('')}
+    </div>
+    <p class="msg" id="gpm"></p>
+    <button class="btn" onclick="saveGroup()">Salvar</button>
+    <button class="btn r" onclick="closeM()">Cancelar</button>`);
+}
+function saveGroup() {
+  const nome = $('#gp1').value.trim();
+  const membros = [...document.querySelectorAll('#gpusers input:checked')].map(x => x.value);
+  if (!nome) return $('#gpm').textContent = 'Informe o nome do grupo.';
+  if (!membros.length) return $('#gpm').textContent = 'Selecione ao menos um usuário.';
+  if (companyGroups().some(g => g.nome.toLowerCase() == nome.toLowerCase())) return $('#gpm').textContent = 'Já existe um grupo com esse nome.';
+  DB.grupos.push({ id: Date.now(), empresa: ME.empresa, nome, membros });
+  save('grupos'); closeM(); render(); showToast('Grupo criado!');
+}
+function deleteGroup(id) {
+  showConfirm('Excluir este grupo? Os boards e metas já criados não são alterados.', () => {
+    DB.grupos = DB.grupos.filter(g => g.id != id); save('grupos'); render();
+  });
+}
+function grupoSelect(sel) {
+  const gr = companyGroups(); if (!gr.length) return '';
+  return `<select onchange="marcaGrupo(this.value,'${sel}');this.value=''" style="margin-bottom:6px"><option value="">Selecionar grupo (marca todos os usuários)…</option>${gr.map(g => `<option value="${g.id}">${esc(g.nome)}</option>`).join('')}</select>`;
+}
+function marcaGrupo(id, sel) {
+  const g = companyGroups().find(x => x.id == id); if (!g) return;
+  document.querySelectorAll(sel + ' input[type=checkbox]').forEach(c => { if ((g.membros || []).some(m => sameEmail(m, c.value))) c.checked = true; });
 }
 async function setInactive(email, inativo) {
   const u = getUser(email);
@@ -2192,6 +2966,7 @@ function openBoard(k) {
   BOARD_KEY = boardKey(b);
   BFILTRO = { resp: '', prio: '', arq: false };
   go('board');
+  window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0;
 }
 
 function openBoardForm() {
@@ -2200,7 +2975,7 @@ function openBoardForm() {
     <h3>Novo board</h3><br>
     <label>Nome do board</label><input id="b1">
     <label>Usuários com acesso</label>
-    <div id="busers" style="max-height:200px;overflow:auto;margin-bottom:10px">
+    ${grupoSelect('#busers')}<div id="busers" style="max-height:200px;overflow:auto;margin-bottom:10px">
       ${companyUsers().filter(u => u.ativo).map(u => `
         <label style="display:flex;align-items:center;color:var(--fg)">
           <input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${sameEmail(u.email, ME.email) ? 'checked disabled' : ''}>${esc(u.nome)}
@@ -2285,7 +3060,7 @@ function openBoardEdit() {
     <h3>Editar board</h3><br>
     <label>Nome do board</label><input id="be1" value="${esc(b.board)}">
     <label>Usuários com acesso</label>
-    <div id="beusers" style="max-height:220px;overflow:auto;margin-bottom:10px">
+    ${grupoSelect('#beusers')}<div id="beusers" style="max-height:220px;overflow:auto;margin-bottom:10px">
       ${companyUsers().filter(u => u.ativo || membro(u.email)).map(u => `
         <label style="display:flex;align-items:center;color:var(--fg)">
           <input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${membro(u.email) || sameEmail(u.email, b.emailautorcriacao) || sameEmail(u.email, ME.email) ? 'checked' : ''} ${sameEmail(u.email, b.emailautorcriacao) || sameEmail(u.email, ME.email) ? 'disabled' : ''}>${esc(u.nome)}
@@ -2294,7 +3069,7 @@ function openBoardEdit() {
     <p class="msg" id="bem"></p>
     <button class="btn" onclick="saveBoardEdit()">Salvar</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>
-    <button class="btn r" style="float:right" onclick="deleteBoard()">🗑 Excluir board</button>`);
+    <button class="btn r bdel" onclick="deleteBoard()">🗑 Excluir board</button>`);
 }
 
 function saveBoardEdit() {
@@ -2572,7 +3347,7 @@ function openGoalForm() {
     <div id="msubs"></div>
     <button class="btn s o" onclick="addSubgoalField()">＋ Adicionar submeta</button><br><br>
     <label>Usuários com acesso</label>
-    <div id="musers" style="max-height:160px;overflow:auto;margin-bottom:10px">
+    ${grupoSelect('#musers')}<div id="musers" style="max-height:160px;overflow:auto;margin-bottom:10px">
       ${companyUsers().filter(u => u.ativo).map(u => `
         <label style="display:flex;align-items:center;color:var(--fg)">
           <input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${sameEmail(u.email, ME.email) ? 'checked disabled' : ''}>${esc(u.nome)}
@@ -2705,7 +3480,7 @@ function updateMenuBadge() {
   const btn = $('#optbtn');
   const mnuNotifs = $('#mnuNotifs');
   
-  if (btn) btn.textContent = '☰' + (total ? ' 🔔' + total : '');
+  if (btn) btn.innerHTML = '☰' + (total ? '<span class="dot"></span>' : '');
   if (mnuNotifs) mnuNotifs.innerHTML = `Notificações${nNotifs ? ' (' + nNotifs + ')' : ''}`;
 }
 
@@ -2791,8 +3566,7 @@ async function dismissReset(id) {
 (async () => {
   const hash = location.hash;
   if (hash == '#empresa') return renderCompanyPage();
-  if (hash == '#termos') return renderDocPage('Termos de uso', TERMOS);
-  if (hash == '#privacidade') return renderDocPage('Política de privacidade', PRIVACIDADE);
+  if (hash == '#termos' || hash == '#privacidade' || hash == '#lgpd') return renderDocPage('Termos, Privacidade e LGPD', DOC_UNIFICADO);
 
   document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
   DB.usuarios = [];
@@ -2802,10 +3576,14 @@ async function dismissReset(id) {
   const fbUser = await new Promise(res => { const off = fb.auth.onAuthStateChanged(u => { off(); res(u); }); });
   if (fbUser) {
     try {
+      const pf = (await fb.db.ref('perfis/' + fbUser.uid).get()).val();
+      if (pf && pf.perfil == 'superadmin' && pf.ativo !== false) return adminHome('painel');
+      if (hash == '#admin') { try { await fb.auth.signOut(); } catch (e) { } return renderAdminLogin(); }
       const r = await montarSessao(fbUser);
       if (r.user) { ME = r.user; return startApp(); }
     } catch (e) { limparSegredos(); }
   }
+  if (hash == '#admin') return renderAdminLogin();
   renderLogin();
 })();
 </script>
