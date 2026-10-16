@@ -162,6 +162,12 @@ header.hc .menu {
   background:var(--g);
   color:#111
 }
+.drop a{display:flex;align-items:center;gap:11px}
+.menu-ico{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.88}
+#optbtn{font-size:0;min-width:42px;position:relative}
+#optbtn:before{content:"";display:block;width:19px;height:14px;margin:auto;border-top:1.7px solid currentColor;border-bottom:1.7px solid currentColor;box-sizing:border-box}
+#optbtn:after{content:"";position:absolute;width:19px;height:1.7px;background:currentColor;left:50%;top:50%;transform:translate(-50%,-50%)}
+#optbtn .dot{font-size:0;position:absolute;right:5px;top:4px;width:7px;height:7px;border-radius:50%;background:#e74c3c}
 .wrap {
   max-width:1150px;
   margin:20px auto;
@@ -220,6 +226,7 @@ header.hc .menu {
   border-color:var(--g);
   color:var(--g)
 }
+.reaction-icon{display:inline-block;font-size:16px;line-height:1;vertical-align:-2px;margin-right:5px}.act button{display:inline-flex;align-items:center;gap:2px}
 .cm {
   background:var(--bg3);
   border-radius:10px;
@@ -241,14 +248,24 @@ header.hc .menu {
   width:42px;
   height:42px;
   border-radius:50%;
-  background:var(--g);
-  color:#111;
+  background:var(--bg3);
+  color:var(--fg);
+  border:1px solid var(--bd2);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight:800;
-  flex:none
+  font-weight:600;
+  letter-spacing:.02em;
+  flex:none;
+  box-shadow:inset 0 0 0 2px var(--bg2)
 }
+.avatar-sm{display:inline-flex;vertical-align:middle;margin-right:6px}
+.idea-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.idea-tags span{font-size:.75rem;padding:3px 8px;border:1px solid var(--bd2);border-radius:12px;color:var(--mut)}
+.userline{display:flex;align-items:flex-start;gap:8px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.userline>span:last-child{min-width:0}\n.date-wrap{display:inline-block;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+.meta{overflow-wrap:anywhere;word-break:break-word}
+input[type=date]{max-width:100%;min-width:0}
+.ideas-tabs{display:flex;flex-wrap:wrap;gap:8px}
 .sc {
   display:flex;
   gap:10px;
@@ -559,8 +576,6 @@ header.hc .menu {
 .badge.late { background:#e53935; color:#fff }
 .kc.late { box-shadow:0 0 0 2px #e53935 }
 .kc.arq { opacity:.6 }
-.tag { display:inline-block; background:var(--bg3); border:1px solid var(--bd2); color:var(--g); border-radius:20px; padding:1px 10px; font-size:.78rem; margin:0 4px 4px 0; cursor:pointer }
-.tag.on { background:var(--g); color:#111; border-color:var(--g) }
 .men { color:var(--g); font-weight:700 }
 .mnt { display:none; background:var(--bg3); border:1px solid var(--g); border-radius:10px; margin-top:4px; overflow:hidden }
 .mnt.on { display:block }
@@ -582,6 +597,10 @@ header.hc .menu {
 .kpi { font-size:1.8rem; font-weight:800; color:var(--g) }
 
 @media (max-width:820px) {
+  .box{min-width:0}
+  .meta{overflow-wrap:anywhere;word-break:break-word}
+  input[type=date]{font-size:14px;padding:8px 5px}
+  .ideas-tabs .btn{flex:1 1 auto}
   .wrap { grid-template-columns:1fr }
   .car { height:170px }
   header img { height:34px }
@@ -713,6 +732,7 @@ function statusPermitido(de, para, fluxo = 'simples') {
 }
 const STATUS_EDITAVEIS = ['pendente', 'em triagem', 'em fase de encerramento', 'em avaliação inicial', 'em avaliação de negócio', 'em implantação'];
 const LANES = ['PARA FAZER', 'EM PROGRESSO', 'PARA AVALIAR', 'EM AVALIAÇÃO', 'FINALIZADO'];
+const boardLanes = b => b && b.modoColunas === 'personalizado' && Array.isArray(b.colunas) && b.colunas.length ? b.colunas : LANES;
 const PRIORIDADE = ['', 'Baixa', 'Média', 'Alta'];
 const CAROUSEL_IMGS = [
   'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=1200',
@@ -799,7 +819,7 @@ function parseDate(s) {
 }
 const byNewest = list => [...list].sort((x, y) => parseDate(y.data) - parseDate(x.data));
 const logoImg = (attrs = '') =>
-  `<img src="img/img2.png" alt="Logo" ${attrs} onerror="this.style.visibility='hidden'">`;
+  `<img src="${lsGet('ins_theme') == 'light' ? 'img/img3.png' : 'img/img2.png'}" alt="Logo" ${attrs} onerror="this.style.visibility='hidden'">`;
 const optionList = (arr, sel) =>
   arr.map(x => `<option ${x == sel ? 'selected' : ''}>${esc(x)}</option>`).join('');
 const modalEl = () => document.getElementById('modal') ||
@@ -888,6 +908,8 @@ function normalizeBoard(b) {
     board: String(b.board || ''),
     datacriacao: b.datacriacao || '',
     emailautorcriacao: String(b.emailautorcriacao || '').trim(),
+    modoColunas: b.modoColunas === 'personalizado' ? 'personalizado' : 'padrao',
+    colunas: Array.isArray(b.colunas) ? b.colunas.map(x => String(x || '').trim()).filter(Boolean) : [],
     usuarios: (Array.isArray(b.usuarios) ? b.usuarios : [])
       .map(u => ({ email: String((u && u.email) || (typeof u == 'string' ? u : '')).trim() })).filter(u => u.email),
     aplicacaocard: (Array.isArray(b.aplicacaocard) ? b.aplicacaocard : []).map(normalizeCard)
@@ -929,7 +951,8 @@ function mergeRecl(local, remote, snapJson) {
 function normalizeCard(c, k) {
   c = c && typeof c == 'object' ? c : {};
   return { ...c, id: Number(c.id) || 200000 + k, prioridade: Number(c.prioridade) || 1,
-           status: LANES.includes(c.status) ? c.status : LANES[0] };
+           status: String(c.status || LANES[0]),
+           subcards: (Array.isArray(c.subcards) ? c.subcards : []).map((x, i) => ({ id: Number(x && x.id) || (Number(c.id || 200000 + k) * 1000 + i + 1), descricao: String((x && x.descricao) || ''), status: x && (x.status === 'concluido' || x.concluida) ? 'concluido' : 'pendente' })) };
 }
 
 function metaPct(subs) {
@@ -1054,6 +1077,11 @@ async function flush() {
 
 /* Consultas */
 const getUser = email => DB.usuarios.find(u => u.email == email) || { nome: email };
+function avatarHtml(nome, size = 30) {
+  const parts = String(nome || '').trim().split(/\s+/).filter(Boolean);
+  const initials = (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] || '?').slice(0, 2)).toUpperCase();
+  return `<span class="av avatar-sm" style="width:${size}px;height:${size}px;font-size:${Math.max(10, Math.round(size * .36))}px" title="${esc(nome || '')}">${esc(initials)}</span>`;
+}
 const isApprover = () => ME.perfil != 'usuario_comum';
 const isAdmin = () => ME.perfil == 'admin';
 const companyIdeas = () => DB.ideias.filter(i => i.empresa == ME.empresa);
@@ -1106,7 +1134,7 @@ function renderCompanyPage() {
     <header>${logoImg()}</header>
     <div class="doc">
       <div style="text-align:center">${logoImg('style="height:90px;border-radius:12px"')}</div>
-      <h1>INSIGHT: cada ideia importa</h1>
+      <h1>INSIGHT: Toda grande inovação começa com um insight.</h1>
       <p>A <b>compreaquidevs</b> desenvolve o <b>INSIGHT</b>, software de programa de ideias onde cada ideia de colaborador importa. Colaboradores propõem, curtem e comentam; aprovadores avaliam e acompanham até a implantação.</p>
 
       <div class="car" style="margin-top:18px">
@@ -1163,8 +1191,8 @@ let ME = null;
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
 let LANG = lsGet('ins_lang') || 'pt';
-const I18N = { en: { 'Home': 'Home', 'Score': 'Score', 'Meu perfil': 'My profile', 'Minhas ideias': 'My ideas', 'Notificações': 'Notifications', 'Metas': 'Goals', 'Todas as ideias': 'All ideas', 'Programa de ideias': 'Idea programs', 'Indicadores': 'Indicators', 'Gestão de usuários': 'User management', 'Aplicação': 'Application', 'Sair': 'Sign out', 'Aprendendo a inovar': 'Learning to innovate', 'Alterar senha': 'Change password', 'Senha atual': 'Current password', 'Nova senha': 'New password', 'Tema': 'Theme', 'Idioma': 'Language', '＋ Criar ideia': '＋ Create idea' },
-  es: { 'Home': 'Inicio', 'Score': 'Puntuación', 'Meu perfil': 'Mi perfil', 'Minhas ideias': 'Mis ideas', 'Notificações': 'Notificaciones', 'Metas': 'Metas', 'Todas as ideias': 'Todas las ideas', 'Programa de ideias': 'Programa de ideas', 'Indicadores': 'Indicadores', 'Gestão de usuários': 'Gestión de usuarios', 'Aplicação': 'Aplicación', 'Sair': 'Salir', 'Aprendendo a inovar': 'Aprendiendo a innovar', 'Alterar senha': 'Cambiar contraseña', 'Senha atual': 'Contraseña actual', 'Nova senha': 'Nueva contraseña', 'Tema': 'Tema', 'Idioma': 'Idioma', '＋ Criar ideia': '＋ Crear idea' } };
+const I18N = { en: { 'Home': 'Home', 'Score': 'Score', 'Meu perfil': 'My profile', 'Minhas ideias': 'My ideas', 'Notificações': 'Notifications', 'Metas': 'Goals', 'Todas as ideias': 'All ideas', 'Programa de ideias': 'Idea programs', 'Indicadores': 'Indicators', 'Gestão de usuários': 'User management', 'Aplicação': 'Idea implementation', 'Sair': 'Sign out', 'Aprendendo a inovar': 'Learning to innovate', 'Alterar senha': 'Change password', 'Senha atual': 'Current password', 'Nova senha': 'New password', 'Tema': 'Theme', 'Idioma': 'Language', '＋ Criar ideia': '＋ Create idea' },
+  es: { 'Home': 'Inicio', 'Score': 'Puntuación', 'Meu perfil': 'Mi perfil', 'Minhas ideias': 'Mis ideas', 'Notificações': 'Notificaciones', 'Metas': 'Metas', 'Todas as ideias': 'Todas las ideas', 'Programa de ideias': 'Programa de ideas', 'Indicadores': 'Indicadores', 'Gestão de usuários': 'Gestión de usuarios', 'Aplicação': 'Aplicación de la idea', 'Sair': 'Salir', 'Aprendendo a inovar': 'Aprendiendo a innovar', 'Alterar senha': 'Cambiar contraseña', 'Senha atual': 'Contraseña actual', 'Nova senha': 'Nueva contraseña', 'Tema': 'Tema', 'Idioma': 'Idioma', '＋ Criar ideia': '＋ Crear idea' } };
 I18N.en['Reportar problema'] = 'Report a problem'; I18N.es['Reportar problema'] = 'Reportar problema';
 I18N.en['Criar grupo'] = 'Create group'; I18N.es['Criar grupo'] = 'Crear grupo';
 const TR_RAW = `Entrar‖Sign in‖Entrar
@@ -1232,7 +1260,7 @@ Sair‖Sign out‖Salir
 Meu perfil‖My profile‖Mi perfil
 Minhas ideias‖My ideas‖Mis ideas
 Notificações‖Notifications‖Notificaciones
-Aplicação‖Application‖Aplicación
+Aplicação da ideia‖Idea implementation‖Aplicación de la idea
 Metas‖Goals‖Metas
 Todas as ideias‖All ideas‖Todas las ideas
 Avaliar ideias‖Review ideas‖Evaluar ideas
@@ -1407,7 +1435,7 @@ Deseja realmente excluir este card?‖Do you really want to delete this card?‖
 Informe o nome do board.‖Enter the board name.‖Ingrese el nombre del tablero.
 Informe o título do card.‖Enter the card title.‖Ingrese el título de la tarjeta.
 Nenhum board disponível para você.‖No boards available to you.‖No hay tableros disponibles para usted.
-Você não participa de nenhum board. Crie um em "Aplicação".‖You are not in any board. Create one in "Application".‖No participa en ningún tablero. Cree uno en "Aplicación".
+Você não participa de nenhum board. Crie um em "Aplicação da ideia".‖You are not in any board. Create one in "Application".‖No participa en ningún tablero. Cree uno en "Aplicación".
 Criar card a partir da ideia‖Create card from idea‖Crear tarjeta desde la idea
 Criar card‖Create card‖Crear tarjeta
 Título do card‖Card title‖Título de la tarjeta
@@ -1601,7 +1629,10 @@ const trObserver = new MutationObserver(ms => {
 if (LANG != 'pt') { document.documentElement.lang = LANG; trNode(document.body); trObserver.observe(document.documentElement, TR_OBS); }
 const t = k => (I18N[LANG] || {})[k] || k;
 function applyTheme() { if (ME && lsGet('ins_theme') == 'light') document.documentElement.setAttribute('data-theme', 'light'); else document.documentElement.removeAttribute('data-theme'); }
-function setTheme(v) { lsSet('ins_theme', v); applyTheme(); }
+function setTheme(v) {
+  lsSet('ins_theme', v); applyTheme();
+  document.querySelectorAll('header img, .login img').forEach(img => { img.src = v === 'light' ? 'img/img3.png' : 'img/img2.png'; });
+}
 function setLang(v) { lsSet('ins_lang', v); location.reload(); }
 
 /* Só o e-mail fica salvo no navegador. A sessão (e o "lembrar login") é gerenciada pelo Firebase Authentication. */
@@ -1634,14 +1665,14 @@ function renderLogin() {
   document.body.innerHTML = `
     <div class="login"><div class="box">
       ${logoImg()}
-      <h2>Bem-vindo ao INSIGHT</h2><p class="meta">Cada ideia importa</p>
-      <div style="text-align:left">
-        <label>E-mail</label><input id="le" type="email" value="${esc(saved.email)}">
-        <label>Senha</label><input id="lp" type="password" value="${esc(saved.senha)}" onkeydown="if(event.key=='Enter')doLogin()">
+      <h2>Bem-vindo ao INSIGHT</h2><p class="meta">Toda grande inovação começa com um insight.</p>
+      <form id="loginForm" style="text-align:left" autocomplete="on" onsubmit="event.preventDefault();doLogin()">
+        <label for="le">E-mail</label><input id="le" type="email" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(saved.email)}" required>
+        <label for="lp">Senha</label><input id="lp" type="password" name="password" autocomplete="current-password" required>
         <label><input type="checkbox" id="lr" checked>Lembrar login neste navegador</label>
-      </div>
+      </form>
       <p class="msg" id="lm"></p>
-      <button class="btn" style="width:100%" onclick="doLogin()">Entrar</button>
+      <button class="btn" type="submit" form="loginForm" style="width:100%">Entrar</button>
       <p style="margin-top:12px"><a href="#" onclick="renderForgot();return false">Esqueci a senha</a></p>
       <a class="cta plain" href="#empresa" target="_blank">ACESSE nossa página</a>
     </div></div>`;
@@ -1652,8 +1683,7 @@ function renderAdminLogin() {
   document.body.innerHTML = `<div class="login"><div class="box" style="max-width:380px;margin:60px auto">
     <h2 style="color:var(--g)">Painel Admin</h2><br>
     <label>E-mail</label><input id="ae" type="email"><label>Senha</label><input id="ap" type="password" onkeydown="if(event.key=='Enter')adminLogin()">
-    <p class="msg" id="am"></p><button class="btn" style="width:100%" onclick="adminLogin()">Entrar</button><br><br>
-    <a style="cursor:pointer" onclick="history.replaceState(null,'',location.pathname);renderLogin()">‹ Voltar</a></div></div>`;
+    <p class="msg" id="am"></p><button class="btn" style="width:100%" onclick="adminLogin()">Entrar</button></div></div>`;
 }
 async function adminLogin() {
   const m = $('#am'); m.textContent = '';
@@ -1772,6 +1802,29 @@ async function validarCredenciais(email, senha, lembrar = true) {
   } catch (e) { limparSegredos(); return { erro: erroAuth(e) }; }
 }
 
+/* Solicita ao gerenciador de senhas do navegador que salve a credencial após login bem-sucedido.
+   A senha nunca é gravada no localStorage/sessionStorage pelo INSIGHT. */
+async function salvarCredencialNoNavegador(email, senha) {
+  // A API de credenciais só existe em alguns navegadores/contextos seguros.
+  // Tentamos primeiro criar a credencial explicitamente; alguns browsers suportam a forma via formulário.
+  if (!window.isSecureContext || !navigator.credentials || typeof navigator.credentials.store !== 'function') return false;
+  try {
+    if (typeof window.PasswordCredential === 'function') {
+      const credencial = new PasswordCredential({ id: email, password: senha, name: email });
+      await navigator.credentials.store(credencial);
+      return true;
+    }
+  } catch (e) { console.debug('Armazenamento de credencial explícita indisponível:', e); }
+  try {
+    const form = document.getElementById('loginForm');
+    if (form && typeof window.PasswordCredential === 'function') {
+      await navigator.credentials.store(new PasswordCredential(form));
+      return true;
+    }
+  } catch (e) { console.debug('Armazenamento por formulário indisponível:', e); }
+  return false;
+}
+
 async function doLogin() {
   const email = $('#le').value.trim().toLowerCase();
   const senha = $('#lp').value;
@@ -1793,6 +1846,9 @@ async function doLogin() {
     }
     ME = r.user;
     if (lembrar) savedLogin.save(ME.email); else savedLogin.clear();
+    // Solicita ao gerenciador do navegador que salve a senha após autenticação válida.
+    // A senha é usada apenas nesta chamada e nunca é gravada no armazenamento do site.
+    await salvarCredencialNoNavegador(email, senha);
     loginTsSet();
     startApp();
   } catch (e) {
@@ -2081,10 +2137,44 @@ function viewScore() {
   if (!isApprover()) return '<div class="wrap one"><div class="box">Acesso restrito a gestores e administradores.</div></div>';
   return `<div class="box" id="rankBox">${rankingInner(0)}</div>`;
 }
-const VIEWS = { avaliar: viewAvaliar, problemas: viewProblemas, cursos: viewCursos, curso: viewCurso, score: viewScore, home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
+let IDEAS_TAB = 'minhas';
+function viewIdeas() {
+  const tabs = `<div class="box ideas-tabs">
+    <button class="btn ${IDEAS_TAB === 'minhas' ? '' : 'o'}" onclick="setIdeasTab('minhas')">Minhas ideias</button>
+    ${isApprover() ? `<button class="btn ${IDEAS_TAB === 'todas' ? '' : 'o'}" onclick="setIdeasTab('todas')">Todas as ideias</button><button class="btn ${IDEAS_TAB === 'avaliar' ? '' : 'o'}" onclick="setIdeasTab('avaliar')">Para avaliação${pendentesAvaliar().length ? ` (${pendentesAvaliar().length})` : ''}</button>` : ''}
+  </div>`;
+  const content = IDEAS_TAB === 'todas' && isApprover() ? viewAllIdeas()
+    : IDEAS_TAB === 'avaliar' && isApprover() ? viewAvaliar() : viewMyIdeas();
+  return tabs + content;
+}
+function setIdeasTab(tab) {
+  IDEAS_TAB = (['minhas','todas','avaliar'].includes(tab) && (tab === 'minhas' || isApprover())) ? tab : 'minhas';
+  go('ideias');
+}
+const VIEWS = { ideias: viewIdeas, avaliar: viewAvaliar, problemas: viewProblemas, cursos: viewCursos, curso: viewCurso, score: viewScore, home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
                 usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, board: viewBoard, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals, indicadores: viewIndicadores };
 
+function menuIcon(nome) {
+  const paths = {
+    home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    ideas: '<path d="M9 18h6M10 22h4M8.5 14.5a7 7 0 1 1 7 0c-.8.6-1.2 1.4-1.3 2.5h-4.4c-.1-1.1-.5-1.9-1.3-2.5z"/>',
+    score: '<path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0zM7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4"/>',
+    profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    notifications: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+    goals: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    programs: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    indicators: '<path d="M4 19V5M4 19h17M8 15l4-4 3 2 5-7"/>',
+    users: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 5"/>',
+    application: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h3"/>',
+    learning: '<path d="m3 7 9-4 9 4-9 4zM6 9v6c3 3 9 3 12 0V9M21 7v7"/>',
+    report: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.8 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.8a2 2 0 0 0-3.4 0z"/>',
+    logout: '<path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"/>'
+  };
+  return `<svg class="menu-ico" viewBox="0 0 24 24" aria-hidden="true">${paths[nome] || paths.home}</svg>`;
+}
+
 async function startApp() {
+  IDEAS_TAB = 'minhas';
   document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
   const erro = await loadCompanyData();
   if (erro) {
@@ -2098,21 +2188,20 @@ async function startApp() {
       <div></div>
       ${logoImg('onclick="go(\'home\')"')}
       <div class="menu">
-        <button class="btn" id="optbtn" onclick="$('.drop').classList.toggle('on')">☰</button>
+        <button class="btn" id="optbtn" onclick="$('.drop').classList.toggle('on')"></button>
         <div class="drop">
-          <a onclick="go('home')">${t('Home')}</a>
-          ${isApprover() ? `<a onclick="go('score')">${t('Score')}</a>` : ''}
-          <a onclick="go('perfil')">${t('Meu perfil')}</a>
-          <a onclick="go('minhas')">${t('Minhas ideias')}</a>
-          <a onclick="go('notificacoes')" id="mnuNotifs">Notificações</a>
-          <a onclick="go('metas')">${t('Metas')}</a>
-          ${isApprover() ? `<a onclick="go('todas')">${t('Todas as ideias')}</a><a onclick="go('programas')">${t('Programa de ideias')}</a><a onclick="go('indicadores')">${t('Indicadores')}</a>` : ''}
-          ${isAdmin() ? `<a onclick="go('usuarios')">${t('Gestão de usuários')}</a>` : ''}
-          <a onclick="go('kanban')">${t('Aplicação')}</a>
-          <a onclick="go('cursos')">${t('Aprendendo a inovar')}</a>
-          ${isApprover() ? `<a onclick="go('avaliar')">${t('Avaliar ideias')}${pendentesAvaliar().length ? ' (' + pendentesAvaliar().length + ')' : ''}</a>` : ''}
-          ${isApprover() ? `<a onclick="go('problemas')">${t('Reportar problema')}</a>` : ''}
-          <a onclick="logout()">${t('Sair')}</a>
+          <a onclick="go('notificacoes')" id="mnuNotifs">${menuIcon('notifications')} Notificações</a>
+          <a onclick="go('home')">${menuIcon('home')} ${t('Home')}</a>
+          <a onclick="go('ideias')">${menuIcon('ideas')} Ideias</a>
+          ${isApprover() ? `<a onclick="go('score')">${menuIcon('score')} ${t('Score')}</a>` : ''}
+          <a onclick="go('perfil')">${menuIcon('profile')} ${t('Meu perfil')}</a>
+          <a onclick="go('problemas')">${menuIcon('report')} ${t('Reportar problema')}</a>
+          <a onclick="go('metas')">${menuIcon('goals')} ${t('Metas')}</a>
+          ${isApprover() ? `<a onclick="go('programas')">${menuIcon('programs')} ${t('Programa de ideias')}</a><a onclick="go('indicadores')">${menuIcon('indicators')} ${t('Indicadores')}</a>` : ''}
+          ${isAdmin() ? `<a onclick="go('usuarios')">${menuIcon('users')} ${t('Gestão de usuários')}</a>` : ''}
+          <a onclick="go('kanban')">${menuIcon('application')} Aplicação da ideia</a>
+          <a onclick="go('cursos')">${menuIcon('learning')} ${t('Aprendendo a inovar')}</a>
+          <a onclick="logout()">${menuIcon('logout')} ${t('Sair')}</a>
         </div>
       </div>
     </header>
@@ -2127,7 +2216,7 @@ async function startApp() {
   notifTimer = setInterval(async () => { await refreshNotifs(); updateMenuBadge(); await syncFeed(); checkPrazos(); }, 60*60000);
 }
 
-const FEED_VIEWS = ['home', 'avaliar', 'score', 'minhas', 'todas', 'kanban', 'board', 'metas', 'indicadores'];
+const FEED_VIEWS = ['home', 'ideias', 'avaliar', 'score', 'minhas', 'todas', 'kanban', 'board', 'metas', 'indicadores'];
 const typing = () => /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
 
 async function syncFeed() {
@@ -2185,9 +2274,6 @@ function historicoHtml(i) {
     }).join('')}
   </div></details>`;
 }
-
-const tagsHtml = i => (i.tags || []).length
-  ? `<div style="margin:6px 0">${i.tags.map(t => `<span class="tag" data-t="${esc(t)}" onclick="setTag(this.dataset.t)">#${esc(t)}</span>`).join('')}</div>` : '';
 
 function anexosHtml(i) {
   const lista = (i.anexos || []).filter(a => String(a.dados).startsWith('data:'));
@@ -2266,7 +2352,7 @@ function ideaCard(i, full) {
 
   const isOwner = ME.email == i.emailusuario;
   const canAdjust = full && isOwner && ['rascunho', 'aguardando resposta do idealizador'].includes(i.status);
-  const canEval = full && souAvaliador(i) && STATUS_EDITAVEIS.includes(i.status);
+  const canEval = full && souAvaliador(i) && STATUS_EDITAVEIS.includes(i.status) && (i.status !== 'em implantação' || sameEmail(i.emailimplantador, ME.email));
   const atrasada = full && ideaAtrasada(i);
   const cardBoard = full ? cardDaIdeia(i) : null;
   const canToCard = full && souAvaliador(i) && i.status == 'em implantação' && !cardBoard;
@@ -2279,13 +2365,14 @@ function ideaCard(i, full) {
   <div class="box idea${atrasada ? ' late' : ''}">
     <h3>${esc(i.titulo)} ${full ? `<span class="badge s-${STATUS_CSS[i.status]}">${i.status}</span>` : ''}${atrasada ? ` <span class="badge late">⏰ atrasada há ${Math.floor(diasDesde(ultimaMov(i)))} dias</span>` : ''}</h3>
     <p>${esc(i.descricao)}</p>
-    ${tagsHtml(i)}${anexosHtml(i)}
-    <div class="meta">Por ${esc(getUser(i.emailusuario).nome)}${coaut}${details}</div>
+    ${(Array.isArray(i.tags) ? i.tags : []).length ? `<div class="idea-tags">${i.tags.map(tag => `<span>${esc(tag)}</span>`).join('')}</div>` : ''}
+    ${anexosHtml(i)}
+    <div class="meta userline">${avatarHtml(getUser(i.emailusuario).nome)}<span>Por ${esc(getUser(i.emailusuario).nome)}${coaut}${details}</span></div>
     ${full && i.parecer ? `<div class="cm"><b>Parecer:</b> ${esc(i.parecer)}</div>` : ''}
     ${full ? historicoHtml(i) : ''}
     <div class="act">
-      <button class="${liked ? 'on' : ''}" onclick="toggleLike(${i.id})"><svg class="ico" viewBox="0 0 24 24"><path d="M7 11v9H4v-9h3zm0 0l4-8c1.5 0 2.5 1 2.2 2.5L12.5 9H19a2 2 0 012 2.3l-1.2 7a2 2 0 01-2 1.7H7"/></svg>${likes.length}</button>
-      <button onclick="document.getElementById('c${i.id}').focus()"><svg class="ico" viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/></svg>${comments.length}</button>
+      <button class="${liked ? 'on' : ''}" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true">👍</span>${likes.length}</button>
+      <button onclick="document.getElementById('c${i.id}').focus()"><span class="reaction-icon comment-icon" aria-hidden="true">💬</span>${comments.length}</button>
       ${canAdjust ? `<button onclick="openIdeaForm(${i.id})">✏️ Ajustar</button>` : ''}
       ${canEval ? `<button onclick="openEvalForm(${i.id})">🛠 Avaliar</button>` : ''}
       ${canToCard ? `<button onclick="openIdeaToCard(${i.id})">📋 Criar card</button>` : ''}
@@ -2339,14 +2426,14 @@ function rankingInner(limit) {
   const titulo = RANK.modo == 'mes' ? 'Ranking do mês' : RANK.modo == 'campanha' ? 'Ranking do programa de ideia' : 'Score geral';
   return `
     <h3 style="color:var(--g)">${titulo}</h3>
-    <select onchange="setRank('modo',this.value)">
+    ${isApprover() ? `<select onchange="setRank('modo',this.value)">
       <option value="geral" ${RANK.modo == 'geral' ? 'selected' : ''}>Geral</option>
       <option value="mes" ${RANK.modo == 'mes' ? 'selected' : ''}>Por mês</option>
       <option value="campanha" ${RANK.modo == 'campanha' ? 'selected' : ''}>Por programa de ideia</option>
     </select>
     ${RANK.modo == 'mes' ? `<input type="month" value="${esc(RANK.mes)}" onchange="setRank('mes',this.value)">` : ''}
     ${VIEW == 'home' ? `<a style="cursor:pointer;text-decoration:underline" onclick="go('score')">Ver score completo</a>` : ''}
-    ${RANK.modo == 'campanha' ? `<select onchange="setRank('campanha',this.value)">${progs.map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == RANK.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('') || '<option value="">Nenhum programa de ideia</option>'}</select>` : ''}
+    ${RANK.modo == 'campanha' ? `<select onchange="setRank('campanha',this.value)">${progs.map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == RANK.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('') || '<option value="">Nenhum programa de ideia</option>'}</select>` : ''}` : ''}
     ${(limit ? scoreRanking().slice(0, limit) : scoreRanking()).map(s => `<div class="sc"><div class="av">${esc(s.u.nome.slice(0, 2).toUpperCase())}</div><span>${esc(s.u.nome)} <small>${selosIcones(s.u.email)}</small></span><b>${s.pontos}</b></div>`).join('')}`;
 }
 
@@ -2397,7 +2484,11 @@ function slideIdeiaHtml(d) {
     <small>🏆 IDEIA DO MÊS · ${esc(nomeMes(d.mes).toUpperCase())}</small>
     <h2>${esc(i.titulo)}</h2>
     <p>${esc(desc.slice(0, 160))}${desc.length > 160 ? '…' : ''}</p>
-    <div class="meta">Por ${esc(getUser(i.emailusuario).nome)} · 👍 ${ideaLikes(i).length} · 💬 ${ideaComments(i).length}</div>
+    <div class="meta userline">${avatarHtml(getUser(i.emailusuario).nome)}<span>Por ${esc(getUser(i.emailusuario).nome)}</span></div>
+    <div class="act" style="margin-top:10px">
+      <button type="button" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true">👍</span>${ideaLikes(i).length}</button>
+      <button type="button" onclick="go('home');setTimeout(()=>document.getElementById('c${i.id}')?.focus(),0)"><span class="reaction-icon comment-icon" aria-hidden="true">💬</span>${ideaComments(i).length}</button>
+    </div>
   </div></div>`;
 }
 
@@ -2418,40 +2509,26 @@ function slideText(k) {
 }
 
 /* feed: busca por texto e tags */
-const BUSCA = { q: '', tag: '' };
+const BUSCA = { q: '' };
 const feedBase = () => byNewest(companyIdeas().filter(i => !i.privada && !['implantada', 'rascunho'].includes(i.status)));
 function feedIdeas() {
   const q = semAcento(BUSCA.q).trim();
   return feedBase().filter(i => {
-    if (BUSCA.tag && !(i.tags || []).includes(BUSCA.tag)) return false;
     if (!q) return true;
-    const alvo = semAcento([i.titulo, i.descricao, i.beneficio, i.programaideia, getUser(i.emailusuario).nome, (i.tags || []).join(' ')].join(' '));
+    const alvo = semAcento([i.titulo, i.descricao, i.beneficio, i.programaideia, getUser(i.emailusuario).nome].join(' '));
     return q.split(/\s+/).every(w => alvo.includes(w));
   });
 }
 function feedListHtml() {
   const feed = feedIdeas();
-  const vazio = BUSCA.q || BUSCA.tag ? 'Nenhuma ideia encontrada para a busca.' : 'Nenhuma ideia ainda. Crie a primeira!';
+  const vazio = BUSCA.q ? 'Nenhuma ideia encontrada para a busca.' : 'Nenhuma ideia ainda. Crie a primeira!';
   return `${feed.slice(0, visible).map(i => ideaCard(i)).join('') || `<div class="box">${vazio}</div>`}
     ${feed.length > visible ? `<div style="text-align:center"><button class="btn o" onclick="visible+=PAGE_SIZE;atualizaFeed()">Ver mais</button></div>` : ''}`;
 }
-function tagChipsHtml() {
-  const cont = {};
-  feedBase().forEach(i => (i.tags || []).forEach(t => { cont[t] = (cont[t] || 0) + 1; }));
-  const tags = Object.entries(cont).sort((a, b) => b[1] - a[1]).slice(0, 14);
-  return tags.map(([t, n]) => `<span class="tag${BUSCA.tag == t ? ' on' : ''}" data-t="${esc(t)}" onclick="setTag(this.dataset.t)">#${esc(t)} (${n})</span>`).join('');
-}
 function atualizaFeed() {
   const el = $('#feedLista'); if (el) el.innerHTML = feedListHtml();
-  const c = $('#tagChips'); if (c) c.innerHTML = tagChipsHtml();
 }
 function setBusca(v) { BUSCA.q = v; visible = PAGE_SIZE; atualizaFeed(); }
-function setTag(t) {
-  BUSCA.tag = BUSCA.tag == t ? '' : t;
-  visible = PAGE_SIZE;
-  if (VIEW == 'home') atualizaFeed(); else go('home');
-}
-
 function viewHome() {
   const dm = ideaDoMes();
   const imgs = carouselImgs();
@@ -2469,10 +2546,10 @@ function viewHome() {
       <p class="quote" id="qt">${QUOTES[0]}</p>
       ${loadBanner()}
       <div class="box">
-        <input id="busca" type="search" autocomplete="off" placeholder="🔍 Buscar ideias por texto, autor, programa de ideia ou tag..." value="${esc(BUSCA.q)}" oninput="setBusca(this.value)" style="margin-bottom:6px">
-        <div id="tagChips">${tagChipsHtml()}</div>
+        <input id="busca" type="search" autocomplete="off" placeholder="🔍 Buscar ideias por texto, autor ou programa de ideia..." value="${esc(BUSCA.q)}" oninput="setBusca(this.value)" style="margin-bottom:6px">
       </div>
       <div id="feedLista">${feedListHtml()}</div>
+      ${!isApprover() ? `<div class="box" id="rankBox">${rankingInner(8)}</div>` : ''}
     </div>
     ${isApprover() ? `<aside><div class="box" id="rankBox">${rankingInner()}</div></aside>` : ''}
   </div>`;
@@ -2647,9 +2724,9 @@ function openIdeaForm(id) {
     <select id="f3" onchange="showCriterio()"><option value="">Selecione...</option>${campanhasAbertas(i.programaideia).map(p => `<option ${p.programaideia == i.programaideia ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}</select>
     <div id="f3w" style="display:none"><label>Critério do programa de ideia</label><textarea id="f3c" rows="2" readonly></textarea></div>
     <label>Benefício</label><input id="f4" value="${esc(i.beneficio)}">
+    <label>Tags (separe por vírgula)</label><input id="ftags" value="${esc(Array.isArray(i.tags) ? i.tags.join(', ') : (i.tags || ''))}" placeholder="Ex.: inovação, segurança, produtividade">
     <label>Aprovador (definido no programa de ideia)</label>
     <input id="f5" readonly data-fb="${esc(i.emailaprovador || '')}">
-    <label>Tags (separe por vírgula)</label><input id="f7" value="${esc((i.tags || []).join(', '))}" placeholder="ex.: processo, economia, segurança">
     <label>Coautores</label>
     <div id="fco" style="max-height:130px;overflow:auto;margin-bottom:10px">
       ${colegas.map(u => `<label style="display:flex;align-items:center;color:var(--fg)"><input type="checkbox" style="margin:0 6px 0 0" value="${esc(u.email)}" ${selCo(u.email) ? 'checked' : ''}>${esc(u.nome)}</label>`).join('') || '<small>Nenhum colega disponível.</small>'}
@@ -2693,7 +2770,7 @@ async function saveIdea(id, status) {
   const idea = antiga ||
     { id: Date.now(), empresa: ME.empresa, emailusuario: ME.email, data: now(), dataconclusao: '', parecer: '', historico: [] };
   const statusAntigo = idea.status;
-  const tags = [...new Set(toList($('#f7').value).map(t => t.toLowerCase().replace(/^#/, '')).filter(Boolean))].slice(0, 8);
+  const tags = [...new Set(($('#ftags')?.value || '').split(',').map(x => x.trim()).filter(Boolean))];
   const coautores = [...document.querySelectorAll('#fco input:checked')].map(x => x.value);
 
   Object.assign(idea, { titulo, descricao, programaideia: $('#f3').value, beneficio: $('#f4').value,
@@ -2720,6 +2797,7 @@ async function saveIdea(id, status) {
 
 function openEvalForm(id) {
   const i = DB.ideias.find(x => x.id == id);
+  if (i && i.status === 'em implantação' && !sameEmail(i.emailimplantador, ME.email)) return showToast('Somente o implantador pode ajustar uma ideia em implantação.', 'warning');
   const progI = companyPrograms().find(p => p.programaideia == i.programaideia);
   const implSel = i.emailimplantador || (progI && progI.emailimplantador) || '';
   openModal(`
@@ -2738,6 +2816,7 @@ function openEvalForm(id) {
 
 async function saveEval(id) {
   const i = DB.ideias.find(x => x.id == id);
+  if (i && i.status === 'em implantação' && !sameEmail(i.emailimplantador, ME.email)) return showToast('Somente o implantador pode ajustar uma ideia em implantação.', 'warning');
   const statusAntigo = i.status;
   const parecerAntigo = i.parecer;
 
@@ -2773,7 +2852,7 @@ function openIdeaToCard(id) {
   const i = DB.ideias.find(x => x.id == id);
   if (!i || !isApprover()) return;
   const boards = visibleBoards();
-  if (!boards.length) return showToast('Você não participa de nenhum board. Crie um em "Aplicação".', 'warning');
+  if (!boards.length) return showToast('Você não participa de nenhum board. Crie um em "Aplicação da ideia".', 'warning');
   openModal(`
     <h3>Criar card a partir da ideia</h3><br>
     <label>Board</label>
@@ -2863,7 +2942,7 @@ function exportarCsv() {
     ['ID', i => i.id], ['Título', i => i.titulo], ['Descrição', i => i.descricao],
     ['Autor', i => getUser(i.emailusuario).nome], ['E-mail do autor', i => i.emailusuario],
     ['Coautores', i => (i.coautores || []).map(e => getUser(e).nome).join(', ')],
-    ['Programa de ideia', i => i.programaideia], ['Benefício', i => i.beneficio], ['Tags', i => (i.tags || []).join(', ')],
+    ['Programa de ideia', i => i.programaideia], ['Benefício', i => i.beneficio],
     ['Aprovador', i => getUser(i.emailaprovador).nome], ['Status', i => i.status],
     ['Data', i => i.data], ['Conclusão', i => i.dataconclusao], ['Parecer', i => i.parecer],
     ['Curtidas', i => ideaLikes(i).length], ['Comentários', i => ideaComments(i).length],
@@ -2894,9 +2973,10 @@ function viewProfile() {
     <p class="msg" id="pm"></p>
     <button class="btn" id="pbtn" onclick="changePassword()">${t('Alterar senha')}</button><br><br>
     <label>${t('Tema')}</label>
-    <select onchange="setTheme(this.value)"><option value="dark">Padrão (escuro)</option><option value="light" ${lsGet('ins_theme') == 'light' ? 'selected' : ''}>Fundo branco</option></select>
+    <select onchange="setTheme(this.value)"><option value="dark">Dark (padrão)</option><option value="light" ${lsGet('ins_theme') == 'light' ? 'selected' : ''}>Light Mode</option></select>
     <label>${t('Idioma')}</label>
     <select onchange="setLang(this.value)"><option value="pt">Português</option><option value="en" ${LANG == 'en' ? 'selected' : ''}>English</option><option value="es" ${LANG == 'es' ? 'selected' : ''}>Español</option></select>
+    <div style="margin-top:24px;border-top:1px solid var(--bd);padding-top:18px"><button class="btn o" onclick="go('problemas')">${menuIcon('report')} ${t('Reportar problema')}</button></div>
   </div></div>`;
 }
 function formatDate(s) {
@@ -3105,13 +3185,13 @@ function viewKanban() {
   const lista = DB.cards.map((b, k) => ({ b, k })).filter(x => isBoard(x.b) && isBoardMember(x.b));
   return `
   <div class="wrap one"><div>
-    <h2>Aplicação</h2><br>
+    <h2>Aplicação da ideia</h2><br>
     ${isApprover() ? `<button class="btn" onclick="openBoardForm()">＋ Novo board</button><br><br>` : ''}
     <div class="feats">
       ${lista.map(x => `
         <div class="box idea" style="cursor:pointer" onclick="openBoard(${x.k})">
           <h3>${esc(x.b.board)}</h3>
-          <div class="meta">Criado por ${esc(getUser(x.b.emailautorcriacao).nome)} em ${esc(x.b.datacriacao)}</div>
+          <div class="meta userline">${avatarHtml(getUser(x.b.emailautorcriacao).nome)}<span>Criado por ${esc(getUser(x.b.emailautorcriacao).nome)} em ${esc(x.b.datacriacao)}</span></div>
           <div class="meta">${x.b.aplicacaocard.length} card(s) · ${x.b.usuarios.length} usuário(s)</div>
         </div>`).join('')}
     </div>
@@ -3133,6 +3213,9 @@ function openBoardForm() {
   openModal(`
     <h3>Novo board</h3><br>
     <label>Nome do board</label><input id="b1">
+    <label>Colunas do board</label>
+    <select id="bmodo" onchange="toggleBoardColumnsForm()"><option value="padrao">Padrão</option><option value="personalizado">Personalizado</option></select>
+    <div id="bcolsWrap" style="display:none"><label>Informe uma coluna por linha (a última terá a opção de arquivar cards)</label><textarea id="bcols" rows="5" placeholder="Ex.: Backlog&#10;Em andamento&#10;Revisão&#10;Concluído">${LANES.join('\n')}</textarea></div>
     <label>Usuários com acesso</label>
     ${grupoSelect('#busers')}<div id="busers" style="max-height:200px;overflow:auto;margin-bottom:10px">
       ${companyUsers().filter(u => u.ativo).map(u => `
@@ -3145,11 +3228,24 @@ function openBoardForm() {
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
 }
 
+function toggleBoardColumnsForm() {
+  const modo = $('#bmodo');
+  const wrap = $('#bcolsWrap');
+  if (modo && wrap) wrap.style.display = modo.value === 'personalizado' ? 'block' : 'none';
+}
+function readBoardColumns(prefix) {
+  const modo = $(`#${prefix}modo`).value;
+  if (modo !== 'personalizado') return { modoColunas: 'padrao', colunas: [] };
+  const colunas = [...new Set($(`#${prefix}cols`).value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))];
+  if (colunas.length < 2) { $(`#${prefix}m`).textContent = 'Informe pelo menos duas colunas personalizadas.'; return null; }
+  return { modoColunas: 'personalizado', colunas };
+}
 function saveBoard() {
   const nome = $('#b1').value.trim();
   if (!nome) return $('#bm').textContent = 'Informe o nome do board.';
+  const config = readBoardColumns('b'); if (!config) return;
   const users = [...document.querySelectorAll('#busers input:checked')].map(x => x.value);
-  DB.cards.push({ board: nome, datacriacao: now(), emailautorcriacao: ME.email,
+  DB.cards.push({ board: nome, datacriacao: now(), emailautorcriacao: ME.email, ...config,
     usuarios: users.map(email => ({ email })), aplicacaocard: [] });
   save('cards'); closeM(); render();
   showToast('Board criado!');
@@ -3163,6 +3259,7 @@ function viewBoard() {
   const b = currentBoard();
   if (!b) return `<div class="wrap one"><div class="box">Board não encontrado.<br><br><button class="btn" onclick="go('kanban')">Voltar</button></div></div>`;
   const f = BFILTRO;
+  const lanes = boardLanes(b);
   const cards = b.aplicacaocard.filter(c =>
     (!f.resp || sameEmail(c.emailautor, f.resp) || sameEmail(c.emailavaliador, f.resp)) &&
     (!f.prio || c.prioridade == f.prio) && (f.arq || !c.arquivado));
@@ -3182,19 +3279,20 @@ function viewBoard() {
           ${[1, 2, 3].map(p => `<option value="${p}" ${f.prio == p ? 'selected' : ''}>${PRIORIDADE[p]}</option>`).join('')}</select></div>
       <div><label style="display:flex;align-items:center;margin-bottom:12px"><input type="checkbox" ${f.arq ? 'checked' : ''} onchange="BFILTRO.arq=this.checked;render()">Mostrar arquivados (${nArq})</label></div>
     </div>
-    <div class="board">
-      ${LANES.map(lane => `
-        <div class="lane" data-lane="${lane}"><h4>${lane}</h4>${laneCards(cards, lane).map(c => {
+    <div class="board" style="grid-template-columns:repeat(${lanes.length},minmax(220px,1fr))">
+      ${lanes.map((lane, laneIndex) => `
+        <div class="lane" data-lane="${esc(lane)}"><h4>${esc(lane)}${laneIndex === lanes.length - 1 ? ' · Arquivamento' : ''}</h4>${laneCards(cards, lane).map(c => {
           const atras = cardAtrasado(c);
           return `
             <div class="kc p${c.prioridade}${atras ? ' late' : ''}${c.arquivado ? ' arq' : ''}" data-id="${c.id}" onpointerdown="kStart(event, ${c.id})"><span class="kh" title="Arraste para mover">⠿</span><b>${esc(c.cardnome)}</b>
-              <p class="meta">${esc(c.descricao)}<br>Autor: ${esc(getUser(c.emailautor).nome)}
-                <br>Avaliador: ${esc(getUser(c.emailavaliador).nome)}<br>Prioridade: ${PRIORIDADE[c.prioridade]}
-                ${c.prazo ? `<br>Prazo: ${fmtIso(c.prazo)}${atras ? ' <b style="color:#ff6b6b">⚠ atrasado</b>' : ''}` : ''}
-                ${c.arquivado ? '<br>📦 Arquivado' : ''}</p>
+              <p class="meta"><span class="userline">${esc(c.descricao)}</span>
+                <br><span class="userline">Autor: ${avatarHtml(getUser(c.emailautor).nome, 24)}${esc(getUser(c.emailautor).nome)}</span>
+                <br><span class="userline">Avaliador: ${avatarHtml(getUser(c.emailavaliador).nome, 24)}${esc(getUser(c.emailavaliador).nome)}</span><br>Prioridade: ${PRIORIDADE[c.prioridade]}
+                ${c.prazo ? `<br><span class="date-wrap">Prazo: ${fmtIso(c.prazo)}${atras ? ' <b style="color:#ff6b6b">⚠ atrasado</b>' : ''}</span>` : ''}
+                ${c.arquivado ? '<br>📦 Arquivado' : ''}${c.subcards && c.subcards.length ? `<br><b>Subcards: ${c.subcards.filter(sc => sc.status === 'concluido').length}/${c.subcards.length} concluídos</b>` : ''}</p>
               <button class="btn s o" onclick="openCardForm(${c.id})">Editar</button>
               <button class="btn s r" onclick="deleteCard(${c.id})">Excluir</button>
-              ${c.status == 'FINALIZADO' ? `<button class="btn s o" onclick="toggleArquivar(${c.id})">${c.arquivado ? 'Desarquivar' : '📦 Arquivar'}</button>` : ''}
+              ${laneIndex === lanes.length - 1 ? `<button class="btn s o" onclick="toggleArquivar(${c.id})">${c.arquivado ? 'Desarquivar' : '📦 Arquivar'}</button>` : ''}
               <button class="btn s o" title="Abrir o card e ver os comentários" onclick="openCardForm(${c.id})">💬 ${nCardComments(c)}</button>
             </div>`; }).join('')}
         </div>`).join('')}
@@ -3218,6 +3316,9 @@ function openBoardEdit() {
   openModal(`
     <h3>Editar board</h3><br>
     <label>Nome do board</label><input id="be1" value="${esc(b.board)}">
+    <label>Colunas do board</label>
+    <select id="bemodo" onchange="toggleBoardColumnsFormEdit()"><option value="padrao" ${b.modoColunas !== 'personalizado' ? 'selected' : ''}>Padrão</option><option value="personalizado" ${b.modoColunas === 'personalizado' ? 'selected' : ''}>Personalizado</option></select>
+    <div id="becolsWrap" style="display:${b.modoColunas === 'personalizado' ? 'block' : 'none'}"><label>Uma coluna por linha (a última terá a opção de arquivar cards)</label><textarea id="becols" rows="5">${esc((b.colunas && b.colunas.length ? b.colunas : LANES).join('\n'))}</textarea></div>
     <label>Usuários com acesso</label>
     ${grupoSelect('#beusers')}<div id="beusers" style="max-height:220px;overflow:auto;margin-bottom:10px">
       ${companyUsers().filter(u => u.ativo || membro(u.email)).map(u => `
@@ -3231,13 +3332,20 @@ function openBoardEdit() {
     <button class="btn r bdel" onclick="deleteBoard()">🗑 Excluir board</button>`);
 }
 
+function toggleBoardColumnsFormEdit() { const modo = $('#bemodo'), wrap = $('#becolsWrap'); if (modo && wrap) wrap.style.display = modo.value === 'personalizado' ? 'block' : 'none'; }
+
 function saveBoardEdit() {
   const b = currentBoard();
   if (!b || !canManageBoard(b)) return;
   const nome = $('#be1').value.trim();
   if (!nome) return $('#bem').textContent = 'Informe o nome do board.';
+  const modo = $('#bemodo').value;
+  let colunas = [];
+  if (modo === 'personalizado') { colunas = [...new Set($('#becols').value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))]; if (colunas.length < 2) return $('#bem').textContent = 'Informe pelo menos duas colunas personalizadas.'; }
   const users = [...document.querySelectorAll('#beusers input:checked')].map(x => x.value);
-  b.board = nome;
+  b.board = nome; b.modoColunas = modo; b.colunas = colunas;
+  const lanesNow = boardLanes(b);
+  b.aplicacaocard.forEach(c => { if (!lanesNow.includes(c.status)) c.status = lanesNow[0]; });
   b.usuarios = users.map(email => ({ email }));
   BOARD_KEY = boardKey(b);
   save('cards'); closeM(); render();
@@ -3338,11 +3446,11 @@ function kCleanup() {
 function moveCard(id, lane, beforeId) {
   const b = currentBoard();
   const c = b && b.aplicacaocard.find(x => x.id == id);
-  if (!c) return;
+  if (!c || !boardLanes(b).includes(lane)) return;
   const dest = laneCards(b.aplicacaocard, lane).filter(x => x.id != id);
   const at = beforeId == null ? -1 : dest.findIndex(x => x.id == beforeId);
   dest.splice(at < 0 ? dest.length : at, 0, c);
-  if (c.status != lane) c.dataconclusao = lane == 'FINALIZADO' ? now() : '';
+  if (c.status != lane && b.modoColunas !== 'personalizado') c.dataconclusao = lane == 'FINALIZADO' ? now() : '';
   c.status = lane;
   if (lane != 'FINALIZADO') delete c.arquivado;
   dest.forEach((x, k) => { x.ordem = k + 1; });
@@ -3353,7 +3461,7 @@ function moveCard(id, lane, beforeId) {
 function openCardForm(id) {
   const b = currentBoard();
   if (!b) return;
-  const c = b.aplicacaocard.find(x => x.id == id) || { emailautor: ME.email, status: 'PARA FAZER', prioridade: 1 };
+  const c = b.aplicacaocard.find(x => x.id == id) || { emailautor: ME.email, status: boardLanes(b)[0], prioridade: 1, subcards: [] };
   const userOpts = sel => companyUsers().filter(u => b.usuarios.some(m => sameEmail(m.email, u.email))).map(u => `<option value="${u.email}" ${u.email == sel ? 'selected' : ''}>${esc(u.nome)}</option>`).join('');
   openModal(`
     <h3>Card</h3><br>
@@ -3361,15 +3469,45 @@ function openCardForm(id) {
     <label>Descrição</label><textarea id="k2">${esc(c.descricao)}</textarea>
     <label>Autor</label><select id="k3">${userOpts(c.emailautor)}</select>
     <label>Usuário avaliador</label><select id="k4">${userOpts(c.emailavaliador)}</select>
-    <label>Status</label><select id="k5">${optionList(LANES, c.status)}</select>
+    <label>Status</label><select id="k5">${optionList(boardLanes(b), c.status)}</select>
     <label>Prioridade</label>
     <select id="k6">${[1, 2, 3].map(p => `<option value="${p}" ${p == c.prioridade ? 'selected' : ''}>${p} -${PRIORIDADE[p]}</option>`).join('')}</select>
     <label>Prazo</label><input id="k7" type="date" value="${esc(c.prazo || '')}">
+    ${c.id ? `<div class="box" style="margin-top:10px"><h4>Subcards</h4><p class="meta">Cada subcard começa como pendente. Marque a caixa para concluí-lo.</p><div id="subcardsList">${renderSubcards(c)}</div><label>Descrição do novo subcard</label><input id="subcardDesc" placeholder="Descreva a atividade"><button type="button" class="btn s" onclick="addSubcard(${c.id})">＋ Adicionar subcard</button></div>` : `<p class="meta">Salve o card para adicionar subcards.</p>`}
     <button class="btn" onclick="saveCard(${id || 0})">Salvar</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>
     ${c.id ? `<div id="kcBox" class="kcbox">${cardChatInner(c)}</div>` : ''}`);
   scrollCardChat();
 }
+function renderSubcards(c) {
+  const list = Array.isArray(c.subcards) ? c.subcards : [];
+  if (!list.length) return '<p class="meta">Nenhum subcard ainda.</p>';
+  return list.map(sc => `<div class="subcard-row" style="display:flex;align-items:center;gap:8px;margin:8px 0;padding:8px;border:1px solid var(--bd);border-radius:8px"><label style="display:flex;align-items:center;gap:6px;flex:1;color:var(--fg)"><input type="checkbox" ${sc.status === 'concluido' ? 'checked' : ''} onchange="toggleSubcard(${c.id},${sc.id},this.checked)"><span style="${sc.status === 'concluido' ? 'text-decoration:line-through;opacity:.7' : ''}">${esc(sc.descricao)}</span></label><small>${sc.status === 'concluido' ? 'Concluído' : 'Pendente'}</small><button type="button" class="btn s r" onclick="deleteSubcard(${c.id},${sc.id})">Excluir</button></div>`).join('');
+}
+function updateSubcardsInModal(c) { const box = $('#subcardsList'); if (box) box.innerHTML = renderSubcards(c); }
+function addSubcard(cardId) {
+  const b = currentBoard(), c = b && b.aplicacaocard.find(x => x.id == cardId);
+  const input = $('#subcardDesc'), descricao = input ? input.value.trim() : '';
+  if (!c || !descricao) return;
+  if (!Array.isArray(c.subcards)) c.subcards = [];
+  c.subcards.push({ id: Date.now(), descricao, status: 'pendente' });
+  save('cards'); openCardForm(cardId); showToast('Subcard adicionado.');
+}
+function toggleSubcard(cardId, subId, concluido) {
+  const b = currentBoard(), c = b && b.aplicacaocard.find(x => x.id == cardId);
+  const sc = c && (c.subcards || []).find(x => x.id == subId);
+  if (!sc) return;
+  sc.status = concluido ? 'concluido' : 'pendente';
+  save('cards'); updateSubcardsInModal(c);
+  showToast(concluido ? 'Subcard concluído.' : 'Subcard voltou para pendente.');
+}
+function deleteSubcard(cardId, subId) {
+  const b = currentBoard(), c = b && b.aplicacaocard.find(x => x.id == cardId);
+  if (!c) return;
+  c.subcards = (c.subcards || []).filter(x => x.id != subId);
+  save('cards'); openCardForm(cardId); showToast('Subcard excluído.');
+}
+
 function saveCard(id) {
   if (!$('#k1').value.trim()) return;
   const b = currentBoard();
@@ -3475,13 +3613,13 @@ function goalCard(m, k) {
     <h3>${esc(m.meta)} <span class="badge ${pct >= 100 ? 's-implantada' : 's-implantacao'}">${pct}%</span>${atras ? ' <span class="badge late">⏰ Prazo vencido</span>' : ''}</h3>
     <div class="pbar"><div style="width:${pct}%"></div></div>
     ${m.campanha ? `<div class="meta">🎯 Programa de ideia: ${esc(m.campanha)} · ${ideiasImplantadas(m.campanha)} de ${m.alvo} ideia(s) implantada(s)</div>` : ''}
-    <div class="meta">Criada por ${esc(getUser(m.autor).nome)} em ${esc(m.dataCriacao)} · Previsão de conclusão: ${esc(m.dataPrevisaoConclusao)}</div>
-    <div class="meta">Usuários: ${m.usuarios.map(u => esc(getUser(u.email).nome)).join(', ') || '-'}</div>
+    <div class="meta userline">${avatarHtml(getUser(m.autor).nome)}<span>Criada por ${esc(getUser(m.autor).nome)} em ${esc(m.dataCriacao)} · Previsão de conclusão: ${esc(m.dataPrevisaoConclusao)}</span></div>
+    <div class="meta userline"><span>Usuários:</span><span>${m.usuarios.map(u => `${avatarHtml(getUser(u.email).nome, 24)}${esc(getUser(u.email).nome)}`).join(' ') || '-'}</span></div>
     ${m.submeta.map((x, j) => `
       <label style="display:flex;align-items:center;gap:6px;color:var(--fg);font-size:.95rem;padding:3px 0;cursor:pointer">
         <input type="checkbox" style="margin:0" ${x.concluida ? 'checked' : ''} onchange="toggleSubgoal(${k},${j},this.checked)">
         <span style="${x.concluida ? 'text-decoration:line-through;opacity:.6' : ''}">${esc(x.descricao)}</span>
-        ${x.responsavel ? `<small style="color:var(--mut)">· Responsável: ${esc(getUser(x.responsavel).nome)}</small>` : ''}
+        ${x.responsavel ? `<small class="userline" style="color:var(--mut)">· Responsável: ${avatarHtml(getUser(x.responsavel).nome, 22)}${esc(getUser(x.responsavel).nome)}</small>` : ''}
       </label>`).join('')}
     ${isApprover() ? `<br><button class="btn s r" onclick="deleteGoal(${k})">Excluir</button>` : ''}
   </div>`;
@@ -3652,8 +3790,8 @@ function updateMenuBadge() {
   const btn = $('#optbtn');
   const mnuNotifs = $('#mnuNotifs');
   
-  if (btn) btn.innerHTML = '☰' + (total ? '<span class="dot"></span>' : '');
-  if (mnuNotifs) mnuNotifs.innerHTML = `Notificações${nNotifs ? ' (' + nNotifs + ')' : ''}`;
+  if (btn) btn.innerHTML = total ? '<span class="dot"></span>' : '';
+  if (mnuNotifs) mnuNotifs.innerHTML = `${menuIcon('notifications')} Notificações${nNotifs ? ' (' + nNotifs + ')' : ''}`;
 }
 
 function viewNotifications() {
