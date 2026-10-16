@@ -269,7 +269,9 @@ header.hc .menu {
 }
 .avatar-sm{display:inline-flex;vertical-align:middle;margin-right:6px}
 .idea-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.idea-tags span{font-size:.75rem;padding:3px 8px;border:1px solid var(--bd2);border-radius:12px;color:var(--mut)}
-.userline{display:flex;align-items:flex-start;gap:8px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.userline{display:flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.idea-author{display:flex;align-items:center;gap:8px;margin:8px 0 10px;color:var(--mut);font-size:.9rem}
+.idea-author .avatar-sm{margin-right:0}
 .userline>span:last-child{min-width:0}\n.date-wrap{display:inline-block;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
 .meta{overflow-wrap:anywhere;word-break:break-word}
 input[type=date]{max-width:100%;min-width:0}
@@ -596,8 +598,13 @@ input[type=date]{max-width:100%;min-width:0}
 .tle i { position:absolute; left:-22px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--g) }
 .car .sl { position:absolute; inset:0; opacity:0; transition:.8s; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px 64px; background:linear-gradient(135deg,#1f3a1a,#26292e) }
 .car .sl.on { opacity:1 }
-.car .sl h2 { color:var(--g); margin:6px 0 }
+.car .sl h2 { color:var(--g); margin:8px 0 }
 .car .sl small { color:#ffd93b; font-weight:700; letter-spacing:.04em }
+.car .sl.ideia > div { width:100%; max-width:760px; min-width:0; }
+.car .sl.ideia p { margin:8px auto 0; max-width:700px; overflow-wrap:anywhere; }
+.idea-month-meta { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:6px 16px; margin:12px auto 0; max-width:100%; font-size:.9rem; line-height:1.5; color:#f1f1f1; }
+.idea-month-meta span { min-width:0; overflow-wrap:anywhere; }
+@media (max-width:600px) { .car .sl { padding:18px 42px 34px; } .idea-month-meta { gap:4px 10px; font-size:.82rem; } .car .sl.ideia h2 { font-size:1.2rem; } .car .sl.ideia p { font-size:.9rem; } }
 .brow { display:flex; align-items:center; gap:10px; margin:5px 0; font-size:.88rem }
 .brow .bl { width:120px; flex:none; color:var(--mut); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .brow .bt { flex:1; height:12px; background:var(--bd); border-radius:8px; overflow:hidden }
@@ -2371,11 +2378,12 @@ function ideaCard(i, full) {
 
   return `
   <div class="box idea${atrasada ? ' late' : ''}">
+    <div class="idea-author">${avatarHtml(getUser(i.emailusuario).nome)}<span>${esc(getUser(i.emailusuario).nome)}${coaut}</span></div>
     <h3>${esc(i.titulo)} ${full ? `<span class="badge s-${STATUS_CSS[i.status]}">${i.status}</span>` : ''}${atrasada ? ` <span class="badge late">⏰ atrasada há ${Math.floor(diasDesde(ultimaMov(i)))} dias</span>` : ''}</h3>
     <p>${esc(i.descricao)}</p>
     ${(Array.isArray(i.tags) ? i.tags : []).length ? `<div class="idea-tags">${i.tags.map(tag => `<span>${esc(tag)}</span>`).join('')}</div>` : ''}
     ${anexosHtml(i)}
-    <div class="meta userline">${avatarHtml(getUser(i.emailusuario).nome)}<span>Por ${esc(getUser(i.emailusuario).nome)}${coaut}${details}</span></div>
+    ${full ? `<div class="meta">${details}</div>` : ''}
     ${full && i.parecer ? `<div class="cm"><b>Parecer:</b> ${esc(i.parecer)}</div>` : ''}
     ${full ? historicoHtml(i) : ''}
     <div class="act">
@@ -2492,10 +2500,10 @@ function slideIdeiaHtml(d) {
     <small>🏆 IDEIA DO MÊS · ${esc(nomeMes(d.mes).toUpperCase())}</small>
     <h2>${esc(i.titulo)}</h2>
     <p>${esc(desc.slice(0, 160))}${desc.length > 160 ? '…' : ''}</p>
-    <div class="meta userline">${avatarHtml(getUser(i.emailusuario).nome)}<span>Por ${esc(getUser(i.emailusuario).nome)}</span></div>
-    <div class="act" style="margin-top:10px">
-      <button type="button" aria-label="Curtir ideia" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true"><svg class="reaction-svg" viewBox="0 0 24 24"><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3zM7 10l5-8a3 3 0 0 1 2 3l-1 5h5a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg></span>${ideaLikes(i).length}</button>
-      <button type="button" aria-label="Ver comentários" onclick="go('home');setTimeout(()=>document.getElementById('c${i.id}')?.focus(),0)"><span class="reaction-icon comment-icon" aria-hidden="true"><svg class="reaction-svg" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg></span>${ideaComments(i).length}</button>
+    <div class="idea-month-meta">
+      <span><b>AUTOR:</b> ${esc(getUser(i.emailusuario).nome)}</span>
+      <span>${ideaLikes(i).length} curtidas</span>
+      <span>${ideaComments(i).length} comentários</span>
     </div>
   </div></div>`;
 }
@@ -3293,8 +3301,8 @@ function viewBoard() {
           return `
             <div class="kc p${c.prioridade}${atras ? ' late' : ''}${c.arquivado ? ' arq' : ''}" data-id="${c.id}" onpointerdown="kStart(event, ${c.id})"><span class="kh" title="Arraste para mover">⠿</span><b>${esc(c.cardnome)}</b>
               <p class="meta"><span class="userline">${esc(c.descricao)}</span>
-                <br><span class="userline">Autor: ${avatarHtml(getUser(c.emailautor).nome, 24)}${esc(getUser(c.emailautor).nome)}</span>
-                <br><span class="userline">Avaliador: ${avatarHtml(getUser(c.emailavaliador).nome, 24)}${esc(getUser(c.emailavaliador).nome)}</span><br>Prioridade: ${PRIORIDADE[c.prioridade]}
+                <br><span class="userline">${avatarHtml(getUser(c.emailautor).nome, 24)}${esc(getUser(c.emailautor).nome)}</span>
+                <br><span class="userline">${avatarHtml(getUser(c.emailavaliador).nome, 24)}${esc(getUser(c.emailavaliador).nome)}</span><br>Prioridade: ${PRIORIDADE[c.prioridade]}
                 ${c.prazo ? `<br><span class="date-wrap">Prazo: ${fmtIso(c.prazo)}${atras ? ' <b style="color:#ff6b6b">⚠ atrasado</b>' : ''}</span>` : ''}
                 ${c.arquivado ? '<br>📦 Arquivado' : ''}${c.subcards && c.subcards.length ? `<br><b>Subcards: ${c.subcards.filter(sc => sc.status === 'concluido').length}/${c.subcards.length} concluídos</b>` : ''}</p>
               <button class="btn s o" onclick="openCardForm(${c.id})">Editar</button>
