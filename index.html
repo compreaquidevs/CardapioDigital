@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>INSIGHT - Plataforma de ideias</title>
@@ -531,7 +532,8 @@ header.hc .menu {
 .car img.logo { object-fit:contain; background:var(--bg2) }
 .pbar { height:10px; border-radius:10px; background:var(--bd); overflow:hidden; margin:8px 0 }
 .pbar div { height:100%; background:var(--g); border-radius:10px; transition:.3s }
-.kcm { max-height:150px; overflow:auto; margin-top:8px }
+.kcm { max-height:260px; overflow:auto; margin-top:8px }
+.kcbox { margin-top:18px; border-top:1px solid var(--bd); padding-top:14px }
 .kc input { user-select:text; -webkit-user-select:text }
 
 /* --- novos recursos --- */
@@ -661,7 +663,7 @@ const TABLES = ['usuarios', 'cards', 'curtidas', 'comentarios', 'ideias', 'progr
 let EMPRESA = null;   /* dados da empresa (info) */
 let EMP_ID = '';      /* chave da empresa no banco, ex.: "insight" */
 
-function limparSegredos() { EMP_ID = ''; try { fb.auth.signOut(); } catch (e) { } }
+function limparSegredos() { loginTsClear(); EMP_ID = ''; try { fb.auth.signOut(); } catch (e) { } }
 
 const STATUS = ['rascunho', 'pendente', 'em triagem', 'em avaliação inicial', 'em avaliação de negócio',
   'aguardando resposta do idealizador', 'em implantação', 'em fase de encerramento', 'implantada', 'reprovada'];
@@ -894,6 +896,19 @@ function mergeBoard(local, remote, snapJson) {
   return { ...base, aplicacaocard: cards };
 }
 
+/* reclamação: as mensagens de quem usuário e superadmin são somadas; os demais campos seguem quem alterou por último */
+function mergeRecl(local, remote, snapJson) {
+  const snap = snapJson ? JSON.parse(snapJson) : {};
+  const mk = m => [m.papel, m.autor, m.data, m.texto].join('|');
+  const seen = new Set(), msgs = [];
+  [...(Array.isArray(remote.mensagens) ? remote.mensagens : []), ...(Array.isArray(local.mensagens) ? local.mensagens : [])]
+    .forEach(m => { if (!m || !m.texto) return; const k = mk(m); if (!seen.has(k)) { seen.add(k); msgs.push(m); } });
+  msgs.sort((a, b) => (parseDate(a.data) - parseDate(b.data)) || 0);
+  const semM = o => JSON.stringify({ ...o, mensagens: 0 });
+  const base = semM(local) === semM(snap) ? remote : local;
+  return { ...base, mensagens: msgs };
+}
+
 function normalizeCard(c, k) {
   c = c && typeof c == 'object' ? c : {};
   return { ...c, id: Number(c.id) || 200000 + k, prioridade: Number(c.prioridade) || 1,
@@ -927,7 +942,7 @@ const SYNC = {
   ideias:      { key: i => String(i.id), norm: l => l.map(normalizeIdea) },
   curtidas:    { key: c => c.idideia + '|' + c.autorcurtida, norm: l => l },
   comentarios: { key: c => [c.idideia, c.autorcomentario, c.data, c.comentario].join('|'), norm: l => l },
-  reclamacoes: { key: r => String(r.id), norm: l => l },
+  reclamacoes: { key: r => String(r.id), norm: l => l, merge: mergeRecl },
   cards:       { key: b => [b.board, b.datacriacao, b.emailautorcriacao].join('|'), norm: l => l.map(normalizeBoard), merge: mergeBoard }
 };
 const SNAP = {};
@@ -1090,11 +1105,11 @@ function renderCompanyPage() {
       <p>Muitas vezes, quem está na linha de frente é quem enxerga primeiro o desperdício, o gargalo ou a oportunidade. O INSIGHT dá a essas pessoas um canal simples e organizado para transformar uma observação do dia a dia em uma proposta concreta.</p>
 
       <h2>O produto</h2>
-      <p>Feed de ideias, pontuação, campanhas, fluxo de avaliação com parecer, board kanban e gestão de usuários, tudo por empresa.</p>
+      <p>Feed de ideias, pontuação, programas de ideia, fluxo de avaliação com parecer, board kanban e gestão de usuários, tudo por empresa.</p>
       <div class="feats">
         <div class="box"><h3>💡 Feed de ideias</h3><p class="meta">Todos acompanham as ideias da empresa, curtem e comentam para fortalecer as melhores propostas.</p></div>
         <div class="box"><h3>🏆 Pontuação</h3><p class="meta">Quem propõe, curte e comenta ganha pontos e aparece no ranking geral, estimulando a participação.</p></div>
-        <div class="box"><h3>🎯 Campanhas</h3><p class="meta">Programas de ideias com um tema definido ajudam a direcionar a criatividade para os desafios do momento.</p></div>
+        <div class="box"><h3>🎯 Programas de ideia</h3><p class="meta">Programas de ideias com um tema definido ajudam a direcionar a criatividade para os desafios do momento.</p></div>
         <div class="box"><h3>✅ Avaliação com parecer</h3><p class="meta">Aprovadores analisam cada ideia, atualizam o status e deixam um parecer para o idealizador.</p></div>
         <div class="box"><h3>📋 Board kanban</h3><p class="meta">Organize as ações de implantação em colunas e acompanhe o andamento de cada tarefa.</p></div>
         <div class="box"><h3>📈 Indicadores e metas</h3><p class="meta">Acompanhe indicadores de ideias e defina metas e submetas com responsáveis e prazos.</p></div>
@@ -1103,7 +1118,7 @@ function renderCompanyPage() {
 
       <h2>Como funciona</h2>
       <div class="steps">
-        <div class="st"><div class="av">1</div><p><b>Proponha.</b> O colaborador cadastra a ideia, escolhe a campanha, descreve o benefício esperado e indica um aprovador. Também é possível salvar como rascunho ou marcar a ideia como privada.</p></div>
+        <div class="st"><div class="av">1</div><p><b>Proponha.</b> O colaborador cadastra a ideia, escolhe o programa de ideia e descreve o benefício esperado; o aprovador já vem definido no programa. Também é possível salvar como rascunho ou marcar a ideia como privada.</p></div>
         <div class="st"><div class="av">2</div><p><b>Engaje.</b> Os colegas curtem e comentam, contribuindo para o amadurecimento da proposta.</p></div>
         <div class="st"><div class="av">3</div><p><b>Avalie.</b> O aprovador analisa a ideia, passa por avaliação inicial e de negócio e, se necessário, pede ajustes ao idealizador.</p></div>
         <div class="st"><div class="av">4</div><p><b>Implante.</b> Ideias aprovadas entram em implantação e, ao final, são marcadas como implantadas, com o resultado visível para todos.</p></div>
@@ -1114,7 +1129,7 @@ function renderCompanyPage() {
         <li>Cultura de inovação: todos os colaboradores têm voz, independentemente do cargo.</li>
         <li>Transparência: o status de cada ideia e o parecer do aprovador ficam registrados.</li>
         <li>Engajamento: pontuação e reconhecimento incentivam a participação contínua.</li>
-        <li>Foco: campanhas direcionam as ideias para os temas que mais importam à empresa.</li>
+        <li>Foco: programas de ideia direcionam as ideias para os temas que mais importam à empresa.</li>
         <li>Acompanhamento: indicadores mostram quantas ideias foram implantadas e quantas foram reprovadas.</li>
       </ul>
 
@@ -1176,8 +1191,24 @@ Tentar novamente‖Try again‖Reintentar
 Limpar filtros‖Clear filters‖Limpiar filtros
 Selecione...‖Select...‖Seleccione...
 Geral‖General‖General
+Aprovador (definido no programa de ideia)‖Approver (set in the idea program)‖Aprobador (definido en el programa de ideas)
+(este programa ainda não tem aprovador)‖(this program has no approver yet)‖(este programa aún no tiene aprobador)
+Este programa de ideia ainda não tem aprovador. Peça a um gestor para editá-lo.‖This idea program has no approver yet. Ask a manager to edit it.‖Este programa de ideas aún no tiene aprobador. Pida a un gestor que lo edite.
+Aprovador do programa (obrigatório)‖Program approver (required)‖Aprobador del programa (obligatorio)
+Implantador do programa‖Program implementer‖Implementador del programa
+Selecione o aprovador do programa de ideia.‖Select the idea program approver.‖Seleccione el aprobador del programa de ideas.
+não definido‖not set‖sin definir
+Acesso restrito a gestores e administradores.‖Restricted to managers and administrators.‖Acceso restringido a gestores y administradores.
+Comentários‖Comments‖Comentarios
+Conversa‖Conversation‖Conversación
+Escrever mensagem...‖Write a message...‖Escribir mensaje...
+Nenhuma mensagem ainda.‖No messages yet.‖Aún no hay mensajes.
+Reclamação concluída: a conversa foi encerrada.‖Complaint closed: the conversation has ended.‖Reclamación cerrada: la conversación ha finalizado.
+Esta reclamação já foi concluída.‖This complaint has already been closed.‖Esta reclamación ya fue cerrada.
+Sua sessão expirou após 60 minutos. Entre novamente.‖Your session expired after 60 minutes. Please sign in again.‖Su sesión expiró después de 60 minutos. Inicie sesión de nuevo.
+Sua sessão expira em poucos minutos. Salve o que estiver fazendo.‖Your session expires in a few minutes. Save what you are doing.‖Su sesión expira en pocos minutos. Guarde lo que esté haciendo.
 Por mês‖By month‖Por mes
-Por campanha‖By campaign‖Por campaña
+Por programa de ideia‖By idea program‖Por programa de ideas
 Home‖Home‖Inicio
 Score‖Score‖Puntuación
 Sair‖Sign out‖Salir
@@ -1210,7 +1241,7 @@ Abertura‖Opened‖Apertura
 Conclusão‖Completion‖Conclusión
 Status‖Status‖Estado
 ＋ Criar ideia‖＋ Create idea‖＋ Crear idea
-＋ Nova campanha‖＋ New campaign‖＋ Nueva campaña
+＋ Novo programa de ideia‖＋ New idea program‖＋ Nuevo programa de ideas
 ＋ Nova meta‖＋ New goal‖＋ Nueva meta
 ＋ Novo board‖＋ New board‖＋ Nuevo tablero
 ＋ Novo card‖＋ New card‖＋ Nueva tarjeta
@@ -1227,11 +1258,11 @@ Criar grupo‖Create group‖Crear grupo
 🗑 Excluir board‖🗑 Delete board‖🗑 Eliminar tablero
 💡 Feed de ideias‖💡 Idea feed‖💡 Feed de ideas
 🏆 Pontuação‖🏆 Ranking‖🏆 Clasificación
-🎯 Campanhas‖🎯 Campaigns‖🎯 Campañas
+🎯 Programas de ideia‖🎯 Idea programs‖🎯 Programas de ideas
 📋 Board kanban‖📋 Kanban board‖📋 Tablero kanban
 👥 Gestão de usuários‖👥 User management‖👥 Gestión de usuarios
 📈 Indicadores e metas‖📈 Indicators and goals‖📈 Indicadores y metas
-🔍 Buscar ideias por texto, autor, campanha ou tag...‖🔍 Search ideas by text, author, campaign or tag...‖🔍 Buscar ideas por texto, autor, campaña o etiqueta...
+🔍 Buscar ideias por texto, autor, programa de ideia ou tag...‖🔍 Search ideas by text, author, idea program or tag...‖🔍 Buscar ideas por texto, autor, programa de ideas o etiqueta...
 Ver score completo‖See full score‖Ver puntuación completa
 Meu perfil‖My profile‖Mi perfil
 Nome completo‖Full name‖Nombre completo
@@ -1262,22 +1293,22 @@ Você tem novos avisos de prazo nas notificações.‖You have new deadline aler
 Título‖Title‖Título
 Descrição‖Description‖Descripción
 Benefício‖Benefit‖Beneficio
-Campanha‖Campaign‖Campaña
+Programa de ideia‖Idea program‖Programa de ideas
 Coautores‖Co-authors‖Coautores
 Ideia privada‖Private idea‖Idea privada
 Tags (separe por vírgula)‖Tags (comma separated)‖Etiquetas (separadas por coma)
 Usuário aprovador (obrigatório)‖Approver user (required)‖Usuario aprobador (obligatorio)
 Aprovador da ideia‖Idea approver‖Aprobador de la idea
-Informar um implantador‖Select an implementer‖Indicar un implementador
+Implantador (do programa de ideia)‖Implementer (from the idea program)‖Implementador (del programa de ideas)
 — sem implantador —‖— no implementer —‖— sin implementador —
 Parceiros (outra empresa que ajudará na implantação)‖Partners (another company that will help implement)‖Socios (otra empresa que ayudará en la implantación)
 Nome do parceiro‖Partner name‖Nombre del socio
 Parecer para o idealizador‖Feedback for the idea author‖Opinión para el autor de la idea
 Parecer:‖Feedback:‖Opinión:
 ✅ Avaliação com parecer‖✅ Reviewed with feedback‖✅ Evaluada con opinión
-Preencha título, descrição, campanha e aprovador.‖Fill in title, description, campaign and approver.‖Complete título, descripción, campaña y aprobador.
+Preencha título, descrição e programa de ideia.‖Fill in title, description and idea program.‖Complete título, descripción y programa de ideas.
 Transição de status não permitida.‖Status transition not allowed.‖Transición de estado no permitida.
-Esta campanha já foi encerrada.‖This campaign has already ended.‖Esta campaña ya finalizó.
+Este programa de ideia já foi encerrado.‖This idea program has already ended.‖Este programa de ideas ya finalizó.
 Avaliação/Status atualizados!‖Review/Status updated!‖¡Evaluación/Estado actualizados!
 Você ainda não criou ideias.‖You haven't created ideas yet.‖Aún no ha creado ideas.
 Nenhuma ideia encontrada.‖No ideas found.‖No se encontraron ideas.
@@ -1303,7 +1334,7 @@ implantada‖implemented‖implantada
 reprovada‖rejected‖rechazada
 rascunho‖draft‖borrador
 (indisponível)‖(unavailable)‖(no disponible)
-Campanhas mais ativas‖Most active campaigns‖Campañas más activas
+Programas de ideia mais ativos‖Most active idea programs‖Programas de ideas más activos
 Ideias por mês‖Ideas per month‖Ideas por mes
 ideias enviadas‖ideas submitted‖ideas enviadas
 tempo médio de avaliação‖average review time‖tiempo medio de evaluación
@@ -1316,22 +1347,22 @@ implantadas‖implemented‖implantadas
 Nenhuma ideia implantada ou reprovada no filtro atual.‖No implemented or rejected ideas in the current filter.‖Ninguna idea implantada o rechazada en el filtro actual.
 Programas de ideias com um tema definido ajudam a direcionar a criatividade para os desafios do momento.‖Idea programs with a defined theme help direct creativity toward current challenges.‖Los programas de ideas con un tema definido ayudan a dirigir la creatividad hacia los desafíos del momento.
 Título (Programa de Ideia)‖Title (Idea program)‖Título (Programa de ideas)
-Digite o título da campanha‖Type the campaign title‖Escriba el título de la campaña
+Digite o título do programa de ideia‖Type the idea program title‖Escriba el título del programa de ideas
 Digite a descrição‖Type the description‖Escriba la descripción
-Digite o critério da campanha‖Type the campaign criteria‖Escriba el criterio de la campaña
-Fluxo da campanha‖Campaign flow‖Flujo de la campaña
+Digite o critério do programa de ideia‖Type the idea program criteria‖Escriba el criterio del programa de ideas
+Fluxo do programa de ideia‖Idea program flow‖Flujo del programa de ideas
 Critério‖Criteria‖Criterio
-Critério da campanha‖Campaign criteria‖Criterio de la campaña
+Critério do programa de ideia‖Idea program criteria‖Criterio del programa de ideas
 Início‖Start‖Inicio
 Fim‖End‖Fin
 Encerrada‖Ended‖Finalizada
-Campanhas encerradas deixam de aparecer ao criar uma nova ideia.‖Ended campaigns no longer appear when creating a new idea.‖Las campañas finalizadas dejan de aparecer al crear una idea nueva.
-Nenhuma campanha‖No campaign‖Ninguna campaña
-Nenhuma campanha cadastrada.‖No campaigns registered.‖No hay campañas registradas.
-Sem campanha‖No campaign‖Sin campaña
+Programas de ideia encerrados deixam de aparecer ao criar uma nova ideia.‖Ended idea programs no longer appear when creating a new idea.‖Los programas de ideas finalizados dejan de aparecer al crear una idea nueva.
+Nenhum programa de ideia‖No idea program‖Ningún programa de ideas
+Nenhum programa de ideia cadastrado.‖No idea programs registered.‖No hay programas de ideas registrados.
+Sem programa de ideia‖No idea program‖Sin programa de ideas
 O título é obrigatório.‖The title is required.‖El título es obligatorio.
 O fim não pode ser anterior ao início.‖The end cannot be before the start.‖El fin no puede ser anterior al inicio.
-Há ideias vinculadas a esta campanha. Não é possível excluir.‖There are ideas linked to this campaign. It cannot be deleted.‖Hay ideas vinculadas a esta campaña. No se puede eliminar.
+Há ideias vinculadas a este programa de ideia. Não é possível excluir.‖There are ideas linked to this idea program. It cannot be deleted.‖Hay ideas vinculadas a este programa de ideas. No se puede eliminar.
 Grupos‖Groups‖Grupos
 Nome do grupo‖Group name‖Nombre del grupo
 Usuários do grupo‖Group users‖Usuarios del grupo
@@ -1382,9 +1413,9 @@ Organize as ações de implantação em colunas e acompanhe o andamento de cada 
 Meta‖Goal‖Meta
 Nova meta‖New goal‖Nueva meta
 Previsão de conclusão‖Expected completion‖Previsión de conclusión
-Campanha (opcional): a meta mede as ideias implantadas da campanha‖Campaign (optional): the goal measures the campaign's implemented ideas‖Campaña (opcional): la meta mide las ideas implantadas de la campaña
+Programa de ideia (opcional): a meta mede as ideias implantadas do programa de ideia‖Idea program (optional): the goal measures the idea program's implemented ideas‖Programa de ideas (opcional): la meta mide las ideas implantadas del programa de ideas
 Quantidade de ideias a implantar‖Number of ideas to implement‖Cantidad de ideas a implantar
-Submetas (obrigatório ao menos uma, exceto em meta ligada a campanha)‖Subgoals (at least one required, except for campaign goals)‖Submetas (al menos una obligatoria, excepto en metas de campaña)
+Submetas (obrigatório ao menos uma, exceto em meta ligada a programa de ideia)‖Subgoals (at least one required, except for idea program goals)‖Submetas (al menos una obligatoria, excepto en metas de programa de ideas)
 Descrição da submeta‖Subgoal description‖Descripción de la submeta
 Sem responsável‖No owner‖Sin responsable
 Mostrar metas concluídas‖Show completed goals‖Mostrar metas concluidas
@@ -1435,13 +1466,13 @@ Engaje.‖Engage.‖Involucre.
 Avalie.‖Review.‖Evalúe.
 Implante.‖Implement.‖Implante.
 Sobre a compreaquidevs‖About compreaquidevs‖Sobre compreaquidevs
-Foco: campanhas direcionam as ideias para os temas que mais importam à empresa.‖Focus: campaigns steer ideas toward the themes that matter most to the company.‖Enfoque: las campañas dirigen las ideas hacia los temas que más importan a la empresa.
+Foco: programas de ideia direcionam as ideias para os temas que mais importam à empresa.‖Focus: idea programs steer ideas toward the themes that matter most to the company.‖Enfoque: los programas de ideas dirigen las ideas hacia los temas que más importan a la empresa.
 Engajamento: pontuação e reconhecimento incentivam a participação contínua.‖Engagement: scores and recognition encourage ongoing participation.‖Compromiso: la puntuación y el reconocimiento incentivan la participación continua.
 Cultura de inovação: todos os colaboradores têm voz, independentemente do cargo.‖Innovation culture: every employee has a voice, regardless of role.‖Cultura de innovación: todos los colaboradores tienen voz, sin importar el cargo.
 Transparência: o status de cada ideia e o parecer do aprovador ficam registrados.‖Transparency: each idea's status and the approver's feedback are recorded.‖Transparencia: el estado de cada idea y la opinión del aprobador quedan registrados.
 Acompanhamento: indicadores mostram quantas ideias foram implantadas e quantas foram reprovadas.‖Tracking: indicators show how many ideas were implemented and rejected.‖Seguimiento: los indicadores muestran cuántas ideas fueron implantadas y rechazadas.
 Acompanhe indicadores de ideias e defina metas e submetas com responsáveis e prazos.‖Track idea indicators and set goals and subgoals with owners and deadlines.‖Siga los indicadores de ideas y defina metas y submetas con responsables y plazos.
-Feed de ideias, pontuação, campanhas, fluxo de avaliação com parecer, board kanban e gestão de usuários, tudo por empresa.‖Idea feed, ranking, campaigns, review flow with feedback, kanban board and user management, all per company.‖Feed de ideas, puntuación, campañas, flujo de evaluación con opinión, tablero kanban y gestión de usuarios, todo por empresa.
+Feed de ideias, pontuação, programas de ideia, fluxo de avaliação com parecer, board kanban e gestão de usuários, tudo por empresa.‖Idea feed, ranking, idea programs, review flow with feedback, kanban board and user management, all per company.‖Feed de ideas, puntuación, programas de ideas, flujo de evaluación con opinión, tablero kanban y gestión de usuarios, todo por empresa.
 Perfis de colaborador, aprovador e administrador, com acesso separado por empresa.‖Employee, approver and administrator profiles, with access separated by company.‖Perfiles de colaborador, aprobador y administrador, con acceso separado por empresa.
 Aprovadores analisam cada ideia, atualizam o status e deixam um parecer para o idealizador.‖Approvers review each idea, update the status and leave feedback for the author.‖Los aprobadores analizan cada idea, actualizan el estado y dejan una opinión para el autor.
 Os colegas curtem e comentam, contribuindo para o amadurecimento da proposta.‖Colleagues like and comment, helping the proposal mature.‖Los colegas dan me gusta y comentan, ayudando a madurar la propuesta.
@@ -1479,7 +1510,7 @@ não os divulgamos a terceiros‖we do not disclose it to third parties‖no los
 ~Aprovador:‖Approver:‖Aprobador:
 ~Implantador:‖Implementer:‖Implementador:
 ~Parceiros:‖Partners:‖Socios:
-~Campanha:‖Campaign:‖Campaña:
+~Programa de ideia:‖Idea program:‖Programa de ideas:
 ~Conclusão:‖Completion:‖Conclusión:
 ~Criado por‖Created by‖Creado por
 ~Período:‖Period:‖Período:
@@ -1614,6 +1645,7 @@ async function adminLogin() {
     const c = await fb.auth.signInWithEmailAndPassword($('#ae').value.trim().toLowerCase(), $('#ap').value);
     const pf = (await fb.db.ref('perfis/' + c.user.uid).get()).val();
     if (!pf || pf.perfil != 'superadmin' || pf.ativo === false) { try { fb.auth.signOut(); } catch (e) { } return m.textContent = 'Acesso restrito ao superadmin.'; }
+    loginTsSet();
     adminHome('painel');
   } catch (e) { m.textContent = erroAuth(e); }
 }
@@ -1626,6 +1658,7 @@ async function shallowReq(path) {
   return (await r.json()) || {};
 }
 async function adminHome(tab) {
+  iniciarSessaoTimer();
   ADM.tab = tab || ADM.tab;
   document.body.innerHTML = '<div class="login"><p>Carregando...</p></div>';
   let ids = [], aviso = '';
@@ -1645,9 +1678,16 @@ async function adminHome(tab) {
   } else {
     const l = (await Promise.all(ids.map(async id => ({ id, nome: await nomeEmp(id), lista: await rd(id, 'reclamacoes') || [] }))))
       .flatMap(e => e.lista.map(r => ({ ...r, eid: e.id, enome: e.nome }))).sort((a, b) => b.id - a.id);
-    corpo = `<h2>Reclamações</h2>${aviso ? `<p class="msg">${aviso}</p>` : ''}<br><div class="box scr"><table class="tbl"><tr><th>Empresa</th><th>Autor</th><th>Título</th><th>Descrição</th><th>Abertura</th><th>Conclusão</th><th>Status</th><th></th></tr>
-      ${l.map(r => `<tr><td>${esc(r.enome)}</td><td>${esc(r.autor)}</td><td>${esc(r.titulo)}</td><td>${esc(r.descricao)}</td><td>${esc(r.dataabertura)}</td><td>${esc(r.dataconclusao || '—')}</td><td>${r.status == 'finalizado' ? 'Finalizado' : 'Pendente'}</td>
-        <td><button class="btn s ${r.status == 'finalizado' ? 'o' : ''}" onclick="adminStatus('${esc(r.eid)}',${r.id})">${r.status == 'finalizado' ? 'Reabrir' : 'Finalizar'}</button></td></tr>`).join('') || '<tr><td colspan="8">Nenhuma reclamação.</td></tr>'}</table></div>`;
+    corpo = `<h2>Reclamações</h2>${aviso ? `<p class="msg">${aviso}</p>` : ''}<br>
+      ${l.map(r => {
+        const ms = Array.isArray(r.mensagens) ? r.mensagens : [];
+        const aguarda = r.status != 'finalizado' && ms.length && ms[ms.length - 1].papel == 'usuario';
+        return `<div class="box idea"><h3>${esc(r.titulo)} <span class="badge ${r.status == 'finalizado' ? 's-implantada' : 's-implantacao'}">${r.status == 'finalizado' ? 'Finalizado' : 'Pendente'}</span>${aguarda ? ' <span class="badge late">Nova mensagem do usuário</span>' : ''}</h3>
+          <div class="meta">${esc(r.enome)} · ${esc(r.autor)} · Aberto em ${esc(r.dataabertura)}${r.dataconclusao ? ' · Concluído em ' + esc(r.dataconclusao) : ''}</div>
+          <p style="margin-top:8px">${esc(r.descricao)}</p>
+          ${reclChat(r, `adminMsg('${esc(r.eid)}',${r.id})`)}<br>
+          <button class="btn s ${r.status == 'finalizado' ? 'o' : ''}" onclick="adminStatus('${esc(r.eid)}',${r.id})">${r.status == 'finalizado' ? 'Reabrir' : 'Finalizar'}</button></div>`;
+      }).join('') || '<div class="box">Nenhuma reclamação.</div>'}`;
   }
   document.body.innerHTML = `<header style="flex-wrap:wrap;gap:8px"><b style="color:var(--g)">Painel Superadmin</b>
     <div><button class="btn s ${ADM.tab == 'painel' ? '' : 'o'}" onclick="adminHome('painel')">Painel</button>
@@ -1664,7 +1704,30 @@ async function adminStatus(eid, id) {
   } catch (e) { alert('Não foi possível atualizar a reclamação.'); }
   adminHome('reclamacoes');
 }
-function adminSair() { try { fb.auth.signOut(); } catch (e) { } EMP_ID = ''; ME = null; if (location.hash == '#admin') renderAdminLogin(); else renderLogin(); }
+async function adminMsg(eid, id) {
+  const el = document.getElementById('rm' + id), texto = el ? el.value.trim() : '';
+  if (!texto) return;
+  let r;
+  try {
+    const ref = fb.db.ref('empresas/' + eid + '/reclamacoes');
+    const lista = toArray((await ref.get()).val()) || [];
+    r = lista.find(x => x && x.id == id); if (!r) return;
+    if (r.status == 'finalizado') { alert('Esta reclamação já foi concluída.'); return adminHome('reclamacoes'); }
+    if (!Array.isArray(r.mensagens)) r.mensagens = [];
+    r.mensagens.push({ papel: 'superadmin', autor: 'superadmin', nome: 'Superadmin', texto, data: now() });
+    await ref.set(limpo(lista));
+  } catch (e) { alert('Não foi possível enviar a mensagem.'); return adminHome('reclamacoes'); }
+  /* avisa o usuário (se as regras do banco não permitirem, a mensagem continua aparecendo no card dele) */
+  try {
+    const nref = fb.db.ref('empresas/' + eid + '/notificacoes');
+    const nl = toArray((await nref.get()).val()) || [];
+    nl.push({ id: Date.now(), data: now(), lida: false, tipo: 'resposta_reclamacao', destinoEmail: r.autor,
+      titulo: 'Resposta à sua reclamação', mensagem: `O superadmin respondeu à reclamação "${r.titulo}". Abra "Reportar problema" para ver e responder.` });
+    await nref.set(limpo(nl));
+  } catch (e) { console.warn('Aviso ao usuário não enviado:', e); }
+  adminHome('reclamacoes');
+}
+function adminSair() { try { fb.auth.signOut(); } catch (e) { } loginTsClear(); clearInterval(sessaoTimer); EMP_ID = ''; ME = null; if (location.hash == '#admin') renderAdminLogin(); else renderLogin(); }
 async function montarSessao(fbUser) {
   const perfil = (await fb.db.ref('perfis/' + fbUser.uid).get()).val();
   if (perfil && perfil.perfil == 'superadmin') { limparSegredos(); return { erro: 'E-mail ou senha incorretos.' }; }
@@ -1713,6 +1776,7 @@ async function doLogin() {
     }
     ME = r.user;
     if (lembrar) savedLogin.save(ME.email); else savedLogin.clear();
+    loginTsSet();
     startApp();
   } catch (e) {
     limparSegredos();
@@ -1775,6 +1839,7 @@ function syncUser(found) {
 
 function logout() {
   try { fb.auth.signOut(); } catch (e) { }
+  loginTsClear(); clearInterval(sessaoTimer);
   EMP_ID = '';
   sessao.clear();
   clearInterval(notifTimer);
@@ -1820,6 +1885,37 @@ async function requestReset() {
   }
   btn.disabled = false; btn.textContent = 'Solicitar nova senha';
 }
+
+/* ============ LOGOUT AUTOMÁTICO: a sessão dura no máximo 60 minutos desde o login ============ */
+const SESSAO_MAX_MIN = 60, SESSAO_AVISO_MIN = 5, SESSAO_KEY = 'ins_login_ts';
+const SESSAO_MSG = 'Sua sessão expirou após 60 minutos. Entre novamente.';
+let sessaoTimer, sessaoAvisou = false;
+function loginTsSet() { lsSet(SESSAO_KEY, String(Date.now())); sessaoAvisou = false; }
+function loginTsClear() { try { localStorage.removeItem(SESSAO_KEY); } catch (e) { } sessaoAvisou = false; }
+const loginTsGet = () => Number(lsGet(SESSAO_KEY)) || 0;
+const sessaoExpirada = () => { const ts = loginTsGet(); return !!ts && Date.now() - ts >= SESSAO_MAX_MIN * 60000; };
+function iniciarSessaoTimer() {
+  if (!loginTsGet()) loginTsSet();
+  clearInterval(sessaoTimer);
+  sessaoTimer = setInterval(checarSessao, 15000);
+}
+async function checarSessao() {
+  if (!fb.auth.currentUser) { clearInterval(sessaoTimer); return; }
+  const ts = loginTsGet();
+  if (!ts) return;
+  const resta = SESSAO_MAX_MIN * 60000 - (Date.now() - ts);
+  if (resta > 0) {
+    if (resta <= SESSAO_AVISO_MIN * 60000 && !sessaoAvisou) { sessaoAvisou = true; showToast('Sua sessão expira em poucos minutos. Salve o que estiver fazendo.', 'warning'); }
+    return;
+  }
+  clearInterval(sessaoTimer);
+  const admin = !ME;
+  try { if (dirty.size) await flush(); } catch (e) { }
+  loginTsClear();
+  if (admin) { try { fb.auth.signOut(); } catch (e) { } EMP_ID = ''; renderAdminLogin(); const m = $('#am'); if (m) m.textContent = SESSAO_MSG; }
+  else { logout(); const m = $('#lm'); if (m) m.textContent = SESSAO_MSG; }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checarSessao(); });
 
 /* ======================== 6. ESTRUTURA DO APP =========================== */
 let VIEW = 'home';
@@ -1923,12 +2019,32 @@ function concluirCurso() {
 
 }
 
+/* conversa dentro do card da reclamação (usuário <-> superadmin) — só enquanto a reclamação não foi concluída */
+function reclChat(r, onSend) {
+  const msgs = (Array.isArray(r.mensagens) ? r.mensagens : []).filter(m => m && m.texto);
+  const aberto = r.status != 'finalizado';
+  if (!aberto && !msgs.length) return '';
+  return `<div class="kcbox"><h4 style="color:var(--g);margin-bottom:6px">Conversa</h4>
+    <div class="kcm">${msgs.map(m => `<div class="cm"${m.papel == 'superadmin' ? ' style="border-left:3px solid var(--g)"' : ''}><b>${esc(m.nome || m.autor)}</b>${m.papel == 'superadmin' ? ' <small>(Superadmin)</small>' : ''} <small>${esc(m.data)}</small><br>${esc(m.texto).replace(/\n/g, '<br>')}</div>`).join('') || '<small class="meta">Nenhuma mensagem ainda.</small>'}</div>
+    ${aberto ? `<div class="row" style="margin-top:8px"><input id="rm${r.id}" placeholder="Escrever mensagem..." autocomplete="off" onkeydown="if(event.key=='Enter')${onSend}"><button class="btn s" onclick="${onSend}">Enviar</button></div>`
+      : '<p class="meta" style="margin-top:8px">Reclamação concluída: a conversa foi encerrada.</p>'}</div>`;
+}
+function sendProblemMsg(id) {
+  const el = document.getElementById('rm' + id), texto = el ? el.value.trim() : '';
+  if (!texto) return;
+  const r = (DB.reclamacoes || []).find(x => x.id == id && x.empresa == ME.empresa && sameEmail(x.autor, ME.email));
+  if (!r) return;
+  if (r.status == 'finalizado') return showToast('Esta reclamação já foi concluída.', 'warning');
+  if (!Array.isArray(r.mensagens)) r.mensagens = [];
+  r.mensagens.push({ papel: 'usuario', autor: ME.email, nome: ME.nome, texto, data: now() });
+  save('reclamacoes'); render();
+}
 function viewProblemas() {
   const l = (DB.reclamacoes || []).filter(r => r.empresa == ME.empresa).sort((a, b) => b.id - a.id);
   return `<div class="wrap one"><div><h2>${t('Reportar problema')}</h2><br>
     <button class="btn" onclick="openProblemForm()">＋ Adicionar</button><button class="btn s o" onclick="refreshData().then(render)" style="margin-left:8px">↻ Atualizar</button><br><br>
     ${l.map(r => `<div class="box idea"><h3>${esc(r.titulo)} <span class="badge ${r.status == 'finalizado' ? 's-implantada' : 's-implantacao'}">${r.status == 'finalizado' ? 'Finalizado' : 'Pendente'}</span></h3>
-      <p>${esc(r.descricao)}</p><div class="meta">Aberto em ${esc(r.dataabertura)}${r.dataconclusao ? ' · Concluído em ' + esc(r.dataconclusao) : ''}</div></div>`).join('') || '<div class="box">Nenhum problema reportado.</div>'}</div></div>`;
+      <p>${esc(r.descricao)}</p><div class="meta">Aberto em ${esc(r.dataabertura)}${r.dataconclusao ? ' · Concluído em ' + esc(r.dataconclusao) : ''}</div>${sameEmail(r.autor, ME.email) ? reclChat(r, `sendProblemMsg(${r.id})`) : ''}</div>`).join('') || '<div class="box">Nenhum problema reportado.</div>'}</div></div>`;
 }
 function openProblemForm() {
   openModal(`<h3>Reportar problema</h3><br><label>Título</label><input id="rp1"><label>Descrição</label><textarea id="rp2" rows="5"></textarea>
@@ -1937,14 +2053,17 @@ function openProblemForm() {
 function saveProblem() {
   const titulo = $('#rp1').value.trim(), descricao = $('#rp2').value.trim();
   if (!titulo || !descricao) return $('#rpm').textContent = 'Informe título e descrição.';
-  DB.reclamacoes.push({ id: Date.now(), empresa: ME.empresa, autor: ME.email, titulo, descricao, dataabertura: now(), dataconclusao: '', status: 'pendente' });
+  DB.reclamacoes.push({ id: Date.now(), empresa: ME.empresa, autor: ME.email, titulo, descricao, dataabertura: now(), dataconclusao: '', status: 'pendente', mensagens: [] });
   save('reclamacoes'); closeM(); render(); showToast('Problema enviado!');
 }
 function viewAvaliar() {
   const l = byNewest(pendentesAvaliar());
   return `<div class="wrap one"><div><h2>${t('Avaliar ideias')}</h2><br>${l.map(i => ideaCard(i, true)).join('') || '<div class="box">Nenhuma ideia aguardando sua avaliação.</div>'}</div></div>`;
 }
-function viewScore() { return `<div class="box" id="rankBox">${rankingInner(0)}</div>`; }
+function viewScore() {
+  if (!isApprover()) return '<div class="wrap one"><div class="box">Acesso restrito a gestores e administradores.</div></div>';
+  return `<div class="box" id="rankBox">${rankingInner(0)}</div>`;
+}
 const VIEWS = { avaliar: viewAvaliar, problemas: viewProblemas, cursos: viewCursos, curso: viewCurso, score: viewScore, home: viewHome, minhas: viewMyIdeas, todas: viewAllIdeas, programas: viewPrograms,
                 usuarios: viewUsers, perfil: viewProfile, kanban: viewKanban, board: viewBoard, senhas: viewPasswordRequests, notificacoes: viewNotifications, metas: viewGoals, indicadores: viewIndicadores };
 
@@ -1965,7 +2084,7 @@ async function startApp() {
         <button class="btn" id="optbtn" onclick="$('.drop').classList.toggle('on')">☰</button>
         <div class="drop">
           <a onclick="go('home')">${t('Home')}</a>
-          <a onclick="go('score')">${t('Score')}</a>
+          ${isApprover() ? `<a onclick="go('score')">${t('Score')}</a>` : ''}
           <a onclick="go('perfil')">${t('Meu perfil')}</a>
           <a onclick="go('minhas')">${t('Minhas ideias')}</a>
           <a onclick="go('notificacoes')" id="mnuNotifs">Notificações</a>
@@ -1984,6 +2103,7 @@ async function startApp() {
     <div id="appFoot"></div>
     <div class="fab"><button class="btn" onclick="openIdeaForm()">＋ Criar ideia</button></div>`;
   applyTheme();
+  iniciarSessaoTimer();
   go('home');
   checkPrazos();
   clearInterval(notifTimer);
@@ -2004,6 +2124,7 @@ function go(view) {
   render();
   if (FEED_VIEWS.includes(view)) syncFeed();
   if (view == 'senhas' || view == 'notificacoes') refreshNotifs().then(() => (VIEW == 'senhas' || VIEW == 'notificacoes') && render());
+  if (view == 'problemas') refreshData().then(ch => { if (ch && VIEW == 'problemas' && !typing()) render(); });
 }
 
 function render() {
@@ -2134,7 +2255,7 @@ function ideaCard(i, full) {
   const canToCard = full && souAvaliador(i) && i.status == 'em implantação' && !cardBoard;
   const coaut = (i.coautores || []).length ? ` · Coautores: ${i.coautores.map(e => esc(getUser(e).nome)).join(', ')}` : '';
 
-  const details = full ? ` · Campanha: ${esc(i.programaideia)} · Benefício: ${esc(i.beneficio)} · ${i.data}
+  const details = full ? ` · Programa de ideia: ${esc(i.programaideia)} · Benefício: ${esc(i.beneficio)} · ${i.data}
       · Conclusão: ${i.dataconclusao || '-'} · Aprovador: ${esc(getUser(i.emailaprovador).nome)}${i.emailimplantador ? ' · Implantador: ' + esc(getUser(i.emailimplantador).nome) : ''}${i.parceiros ? ' · Parceiros: ' + esc(i.parceiros) : ''}${i.privada ? ' · 🔒 privada' : ''}` : '';
 
   return `
@@ -2198,17 +2319,17 @@ function scoreRanking() {
 function rankingInner(limit) {
   if (limit === undefined) limit = (VIEW == 'home') ? 8 : 0;
   const progs = companyPrograms();
-  const titulo = RANK.modo == 'mes' ? 'Ranking do mês' : RANK.modo == 'campanha' ? 'Ranking da campanha' : 'Score geral';
+  const titulo = RANK.modo == 'mes' ? 'Ranking do mês' : RANK.modo == 'campanha' ? 'Ranking do programa de ideia' : 'Score geral';
   return `
     <h3 style="color:var(--g)">${titulo}</h3>
     <select onchange="setRank('modo',this.value)">
       <option value="geral" ${RANK.modo == 'geral' ? 'selected' : ''}>Geral</option>
       <option value="mes" ${RANK.modo == 'mes' ? 'selected' : ''}>Por mês</option>
-      <option value="campanha" ${RANK.modo == 'campanha' ? 'selected' : ''}>Por campanha</option>
+      <option value="campanha" ${RANK.modo == 'campanha' ? 'selected' : ''}>Por programa de ideia</option>
     </select>
     ${RANK.modo == 'mes' ? `<input type="month" value="${esc(RANK.mes)}" onchange="setRank('mes',this.value)">` : ''}
     ${VIEW == 'home' ? `<a style="cursor:pointer;text-decoration:underline" onclick="go('score')">Ver score completo</a>` : ''}
-    ${RANK.modo == 'campanha' ? `<select onchange="setRank('campanha',this.value)">${progs.map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == RANK.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('') || '<option value="">Nenhuma campanha</option>'}</select>` : ''}
+    ${RANK.modo == 'campanha' ? `<select onchange="setRank('campanha',this.value)">${progs.map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == RANK.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('') || '<option value="">Nenhum programa de ideia</option>'}</select>` : ''}
     ${(limit ? scoreRanking().slice(0, limit) : scoreRanking()).map(s => `<div class="sc"><div class="av">${esc(s.u.nome.slice(0, 2).toUpperCase())}</div><span>${esc(s.u.nome)} <small>${selosIcones(s.u.email)}</small></span><b>${s.pontos}</b></div>`).join('')}`;
 }
 
@@ -2319,7 +2440,7 @@ function viewHome() {
   const imgs = carouselImgs();
   const total = imgs.length + (dm ? 1 : 0);
   return `
-  <div class="wrap">
+  <div class="wrap${isApprover() ? '' : ' one'}">
     <div>
       <div class="car">
         ${dm ? slideIdeiaHtml(dm) : ''}
@@ -2331,12 +2452,12 @@ function viewHome() {
       <p class="quote" id="qt">${QUOTES[0]}</p>
       ${loadBanner()}
       <div class="box">
-        <input id="busca" type="search" autocomplete="off" placeholder="🔍 Buscar ideias por texto, autor, campanha ou tag..." value="${esc(BUSCA.q)}" oninput="setBusca(this.value)" style="margin-bottom:6px">
+        <input id="busca" type="search" autocomplete="off" placeholder="🔍 Buscar ideias por texto, autor, programa de ideia ou tag..." value="${esc(BUSCA.q)}" oninput="setBusca(this.value)" style="margin-bottom:6px">
         <div id="tagChips">${tagChipsHtml()}</div>
       </div>
       <div id="feedLista">${feedListHtml()}</div>
     </div>
-    <aside><div class="box" id="rankBox">${rankingInner()}</div></aside>
+    ${isApprover() ? `<aside><div class="box" id="rankBox">${rankingInner()}</div></aside>` : ''}
   </div>`;
 }
 
@@ -2431,7 +2552,7 @@ function viewAllIdeas() {
       <div class="box filtros">
         <div><label>Inserida a partir de</label><input type="date" value="${esc(f.de)}" onchange="setFiltroTodas('de',this.value)"></div>
         <div><label>Inserida até</label><input type="date" value="${esc(f.ate)}" onchange="setFiltroTodas('ate',this.value)"></div>
-        <div><label>Campanha</label>
+        <div><label>Programa de ideia</label>
           <select onchange="setFiltroTodas('campanha',this.value)">
             <option value="">Todas</option>
             ${companyPrograms().map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == f.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}
@@ -2496,7 +2617,6 @@ function showSimilar(idAtual) {
 
 function openIdeaForm(id) {
   const i = DB.ideias.find(x => x.id == id) || {};
-  const aprovadores = companyUsers().filter(u => u.ativo && u.perfil != 'usuario_comum');
   const dono = i.emailusuario || ME.email;
   const selCo = e => (i.coautores || []).some(x => sameEmail(x, e));
   const colegas = companyUsers().filter(u => !sameEmail(u.email, dono) && (u.ativo || selCo(u.email)));
@@ -2506,13 +2626,12 @@ function openIdeaForm(id) {
     <label>Título</label><input id="f1" value="${esc(i.titulo)}" autocomplete="off" oninput="showSimilar(${id || 0})">
     <div id="fdup"></div>
     <label>Descrição</label><textarea id="f2" rows="4">${esc(i.descricao)}</textarea>
-    <label>Campanha</label>
+    <label>Programa de ideia</label>
     <select id="f3" onchange="showCriterio()"><option value="">Selecione...</option>${campanhasAbertas(i.programaideia).map(p => `<option ${p.programaideia == i.programaideia ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}</select>
-    <div id="f3w" style="display:none"><label>Critério da campanha</label><textarea id="f3c" rows="2" readonly></textarea></div>
+    <div id="f3w" style="display:none"><label>Critério do programa de ideia</label><textarea id="f3c" rows="2" readonly></textarea></div>
     <label>Benefício</label><input id="f4" value="${esc(i.beneficio)}">
-    <label>Usuário aprovador (obrigatório)</label>
-    <select id="f5"><option value="">Selecione...</option>
-      ${aprovadores.map(u => `<option value="${u.email}" ${u.email == i.emailaprovador ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>
+    <label>Aprovador (definido no programa de ideia)</label>
+    <input id="f5" readonly data-fb="${esc(i.emailaprovador || '')}">
     <label>Tags (separe por vírgula)</label><input id="f7" value="${esc((i.tags || []).join(', '))}" placeholder="ex.: processo, economia, segurança">
     <label>Coautores</label>
     <div id="fco" style="max-height:130px;overflow:auto;margin-bottom:10px">
@@ -2536,17 +2655,22 @@ function showCriterio() {
   const txt = p && p.criterio ? p.criterio : '';
   w.style.display = txt ? '' : 'none';
   $('#f3c').value = txt;
+  const ap = $('#f5');
+  if (ap) { const e = (p && p.emailaprovador) || ap.dataset.fb || ''; ap.value = e ? getUser(e).nome : (p ? '(este programa ainda não tem aprovador)' : ''); }
 }
 
 async function saveIdea(id, status) {
-  const titulo = $('#f1').value.trim(), descricao = $('#f2').value.trim(), aprovador = $('#f5').value;
-  if (!titulo || !descricao || !aprovador || !$('#f3').value)
-    return $('#fm').textContent = 'Preencha título, descrição, campanha e aprovador.';
+  const titulo = $('#f1').value.trim(), descricao = $('#f2').value.trim();
+  if (!titulo || !descricao || !$('#f3').value)
+    return $('#fm').textContent = 'Preencha título, descrição e programa de ideia.';
 
   const antiga = DB.ideias.find(x => x.id == id);
   const prog = companyPrograms().find(p => p.programaideia == $('#f3').value);
+  const aprovador = (prog && prog.emailaprovador) || (antiga && antiga.emailaprovador) || '';
+  if (!aprovador)
+    return $('#fm').textContent = 'Este programa de ideia ainda não tem aprovador. Peça a um gestor para editá-lo.';
   if (prog && campanhaEncerrada(prog) && (!antiga || antiga.programaideia != prog.programaideia))
-    return $('#fm').textContent = 'Esta campanha já foi encerrada.';
+    return $('#fm').textContent = 'Este programa de ideia já foi encerrado.';
 
   const isNew = !id;
   const idea = antiga ||
@@ -2579,13 +2703,14 @@ async function saveIdea(id, status) {
 
 function openEvalForm(id) {
   const i = DB.ideias.find(x => x.id == id);
+  const progI = companyPrograms().find(p => p.programaideia == i.programaideia);
+  const implSel = i.emailimplantador || (progI && progI.emailimplantador) || '';
   openModal(`
     <h3>Avaliar / Ajustar Status: ${esc(i.titulo)}</h3><br>
-    <label>Aprovador da ideia</label><select id="e3">${companyUsers().filter(u => u.ativo && u.perfil != 'usuario_comum').map(u => `<option value="${esc(u.email)}" ${sameEmail(u.email, i.emailaprovador) ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>
     <label>Status</label><select id="e1" onchange="$('#e4w').style.display=this.value=='em implantação'?'':'none'">${FLUXOS[fluxoDe(i)].map(x => { const ok = statusPermitido(i.status, x, fluxoDe(i)); return `<option value="${esc(x)}" ${x == i.status ? 'selected' : ''} ${ok ? '' : 'disabled style="color:#9e9e9e"'}>${esc(x)}${ok ? '' : ' (indisponível)'}</option>`; }).join('')}</select>
     <div id="e4w" style="display:${i.status == 'em implantação' ? '' : 'none'}">
-      <label>Informar um implantador</label>
-      <select id="e4"><option value="">— sem implantador —</option>${companyUsers().filter(u => u.ativo && u.perfil != 'usuario_comum').map(u => `<option value="${esc(u.email)}" ${sameEmail(u.email, i.emailimplantador) ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>
+      <label>Implantador (do programa de ideia)</label>
+      <select id="e4"><option value="">— sem implantador —</option>${companyUsers().filter(u => (u.ativo || sameEmail(u.email, implSel)) && u.perfil != 'usuario_comum').map(u => `<option value="${esc(u.email)}" ${sameEmail(u.email, implSel) ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}</select>
       <label>Parceiros (outra empresa que ajudará na implantação)</label>
       <input id="e5" value="${esc(i.parceiros || '')}" placeholder="Nome do parceiro">
     </div>
@@ -2602,11 +2727,6 @@ async function saveEval(id) {
   if (!statusPermitido(statusAntigo, $('#e1').value, fluxoDe(i))) return showToast('Transição de status não permitida.', 'warning');
   i.status = $('#e1').value;
   i.parecer = $('#e2').value;
-  const novoAp = $('#e3').value;
-  if (novoAp && !sameEmail(novoAp, i.emailaprovador)) {
-    pushNotification({ tipo: 'novo_aprovador', destinoEmail: novoAp, titulo: 'Você é o novo aprovador de uma ideia', mensagem: `${ME.nome} definiu você como aprovador da ideia "${i.titulo}".`, idideia: i.id });
-    i.emailaprovador = novoAp;
-  }
   if (i.status == 'em implantação') {
     const novo = $('#e4').value;
     if (novo && !sameEmail(novo, i.emailimplantador) && !sameEmail(novo, ME.email))
@@ -2701,7 +2821,7 @@ function viewIndicadores() {
   }
   const porMes = meses.map(m => ({ l: rotuloMes(m), v: base.filter(i => mesDe(i) == m).length }));
   const camp = {};
-  base.forEach(i => { const c = i.programaideia || '(sem campanha)'; camp[c] = (camp[c] || 0) + 1; });
+  base.forEach(i => { const c = i.programaideia || '(sem programa de ideia)'; camp[c] = (camp[c] || 0) + 1; });
   const topCamp = Object.entries(camp).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([l, v]) => ({ l, v }));
 
   return `
@@ -2714,7 +2834,7 @@ function viewIndicadores() {
       <div class="box ${atrasadas ? 'late' : ''}"><div class="kpi" style="${atrasadas ? 'color:#ff6b6b' : ''}">${atrasadas}</div><p class="meta">ideias atrasadas na avaliação (de ${emAvaliacao.length} em avaliação · prazo ${PRAZO_AVALIACAO_DIAS} dias)</p></div>
     </div>
     <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Ideias por mês</h3>${barrasHtml(porMes)}</div>
-    <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Campanhas mais ativas</h3>${topCamp.length ? barrasHtml(topCamp) : '<p class="meta">Sem dados.</p>'}</div>
+    <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Programas de ideia mais ativos</h3>${topCamp.length ? barrasHtml(topCamp) : '<p class="meta">Sem dados.</p>'}</div>
     <div class="box">${indicadorHtml(base)}</div>
   </div></div>`;
 }
@@ -2726,7 +2846,7 @@ function exportarCsv() {
     ['ID', i => i.id], ['Título', i => i.titulo], ['Descrição', i => i.descricao],
     ['Autor', i => getUser(i.emailusuario).nome], ['E-mail do autor', i => i.emailusuario],
     ['Coautores', i => (i.coautores || []).map(e => getUser(e).nome).join(', ')],
-    ['Campanha', i => i.programaideia], ['Benefício', i => i.beneficio], ['Tags', i => (i.tags || []).join(', ')],
+    ['Programa de ideia', i => i.programaideia], ['Benefício', i => i.beneficio], ['Tags', i => (i.tags || []).join(', ')],
     ['Aprovador', i => getUser(i.emailaprovador).nome], ['Status', i => i.status],
     ['Data', i => i.data], ['Conclusão', i => i.dataconclusao], ['Parecer', i => i.parecer],
     ['Curtidas', i => ideaLikes(i).length], ['Comentários', i => ideaComments(i).length],
@@ -2778,37 +2898,44 @@ function viewPrograms() {
   return `
   <div class="wrap one"><div>
     <h2>Programa de ideias</h2><br>
-    <button class="btn" onclick="openProgramForm('')">＋ Nova campanha</button><br><br>
+    <button class="btn" onclick="openProgramForm('')">＋ Novo programa de ideia</button><br><br>
     ${companyPrograms().map(p => `
       <div class="box idea">
         <h3>${esc(p.programaideia)}${campanhaEncerrada(p) ? ' <span class="badge s-reprovada">Encerrada</span>' : ''}</h3>
         <p>${esc(p.descricao)}</p>
         ${p.criterio ? `<p class="meta">Critério: ${esc(p.criterio)}</p>` : ''}
-        ${p.inicio || p.fim ? `<p class="meta">Período: ${p.inicio ? fmtIso(p.inicio) : '—'} a ${p.fim ? fmtIso(p.fim) : '—'}</p>` : ''}<br>
+        ${p.inicio || p.fim ? `<p class="meta">Período: ${p.inicio ? fmtIso(p.inicio) : '—'} a ${p.fim ? fmtIso(p.fim) : '—'}</p>` : ''}
+        <p class="meta">Aprovador: ${p.emailaprovador ? esc(getUser(p.emailaprovador).nome) : '<b style="color:#ff6b6b">não definido</b>'} · Implantador: ${p.emailimplantador ? esc(getUser(p.emailimplantador).nome) : '—'}</p><br>
         <button class="btn s o" onclick="openProgramForm('${esc(p.programaideia)}')">Editar</button>
         <button class="btn s r" onclick="deleteProgram('${esc(p.programaideia)}')">Excluir</button>
-      </div>`).join('') || '<div class="box">Nenhuma campanha cadastrada.</div>'}
+      </div>`).join('') || '<div class="box">Nenhum programa de ideia cadastrado.</div>'}
   </div></div>`;
 }
 
 function openProgramForm(nome = '') {
   const p = companyPrograms().find(x => x.programaideia == nome) || {};
+  const gest = sel => companyUsers().filter(u => (u.ativo || sameEmail(u.email, sel)) && u.perfil != 'usuario_comum')
+    .map(u => `<option value="${esc(u.email)}" ${sameEmail(u.email, sel) ? 'selected' : ''}>${esc(u.nome)}</option>`).join('');
   openModal(`
-    <h3>${nome ? 'Editar' : 'Nova'} Campanha</h3><br>
+    <h3>${nome ? 'Editar' : 'Novo'} Programa de ideia</h3><br>
     <label>Título (Programa de Ideia)</label>
-    <input id="g1" value="${esc(p.programaideia || '')}" placeholder="Digite o título da campanha">
+    <input id="g1" value="${esc(p.programaideia || '')}" placeholder="Digite o título do programa de ideia">
     <label>Descrição</label>
     <textarea id="g2" rows="4" placeholder="Digite a descrição">${esc(p.descricao || '')}</textarea>
-    <label>Fluxo da campanha</label>
+    <label>Fluxo do programa de ideia</label>
     <select id="g6" onchange="$('#g6d').textContent=fluxoDesc(this.value)"><option value="simples" ${p.fluxo != 'complexo' ? 'selected' : ''}>Simples</option><option value="complexo" ${p.fluxo == 'complexo' ? 'selected' : ''}>Complexo</option></select>
     <p class="fdesc" id="g6d">${fluxoDesc(p.fluxo == 'complexo' ? 'complexo' : 'simples')}</p>
+    <label>Aprovador do programa (obrigatório)</label>
+    <select id="g7"><option value="">Selecione...</option>${gest(p.emailaprovador)}</select>
+    <label>Implantador do programa</label>
+    <select id="g8"><option value="">— sem implantador —</option>${gest(p.emailimplantador)}</select>
     <label>Critério</label>
-    <textarea id="g3" rows="2" placeholder="Digite o critério da campanha">${esc(p.criterio || '')}</textarea>
+    <textarea id="g3" rows="2" placeholder="Digite o critério do programa de ideia">${esc(p.criterio || '')}</textarea>
     <div class="filtros">
       <div><label>Início</label><input id="g4" type="date" value="${esc(p.inicio || '')}"></div>
       <div><label>Fim</label><input id="g5" type="date" value="${esc(p.fim || '')}"></div>
     </div>
-    <p class="meta">Campanhas encerradas deixam de aparecer ao criar uma nova ideia.</p>
+    <p class="meta">Programas de ideia encerrados deixam de aparecer ao criar uma nova ideia.</p>
     <p class="msg" id="gm"></p>
     <button class="btn" onclick="saveProgram('${esc(nome)}')">Salvar</button>
     <button class="btn r" onclick="closeM()">Cancelar</button>`);
@@ -2819,7 +2946,9 @@ function saveProgram(antigo) {
   const descricao = $('#g2').value.trim();
   const criterio = $('#g3').value.trim();
   const inicio = $('#g4').value, fim = $('#g5').value, fluxo = $('#g6').value;
+  const aprovador = $('#g7').value, implantador = $('#g8').value;
   if (!titulo) return $('#gm').textContent = 'O título é obrigatório.';
+  if (!aprovador) return $('#gm').textContent = 'Selecione o aprovador do programa de ideia.';
   if (inicio && fim && fim < inicio) return $('#gm').textContent = 'O fim não pode ser anterior ao início.';
 
   const p = companyPrograms().find(x => x.programaideia == antigo);
@@ -2828,8 +2957,19 @@ function saveProgram(antigo) {
       companyIdeas().filter(i => i.programaideia == antigo).forEach(i => i.programaideia = titulo);
       save('ideias');
     }
-    Object.assign(p, { programaideia: titulo, descricao, criterio, inicio, fim, fluxo });
+    const apAnt = p.emailaprovador || '';
+    Object.assign(p, { programaideia: titulo, descricao, criterio, inicio, fim, fluxo, emailaprovador: aprovador, emailimplantador: implantador });
     save('programas');
+    /* trocou o aprovador do programa: as ideias ainda em avaliação passam para o novo aprovador */
+    if (!sameEmail(aprovador, apAnt)) {
+      const abertas = companyIdeas().filter(i => i.programaideia == titulo && STATUS_EDITAVEIS.includes(i.status) && !sameEmail(i.emailaprovador, aprovador));
+      abertas.forEach(i => i.emailaprovador = aprovador);
+      if (abertas.length) {
+        save('ideias');
+        pushNotifications(abertas.filter(() => !sameEmail(aprovador, ME.email)).map(i => ({ tipo: 'novo_aprovador', destinoEmail: aprovador,
+          titulo: 'Você é o novo aprovador de uma ideia', mensagem: `Você passou a ser o aprovador do programa de ideia "${titulo}" e da ideia "${i.titulo}".`, idideia: i.id })));
+      }
+    }
   } else {
     DB.programas.push({
       programaideia: titulo,
@@ -2839,6 +2979,8 @@ function saveProgram(antigo) {
       inicio,
       fim,
       fluxo,
+      emailaprovador: aprovador,
+      emailimplantador: implantador,
       emailautor: ME.email
     });
     save('programas');
@@ -2850,11 +2992,11 @@ function saveProgram(antigo) {
 function deleteProgram(nome) {
   const temIdeias = companyIdeas().some(i => i.programaideia == nome);
   if (temIdeias) {
-    showToast('Há ideias vinculadas a esta campanha. Não é possível excluir.');
+    showToast('Há ideias vinculadas a este programa de ideia. Não é possível excluir.');
     return;
   }
 
-  showConfirm(`Deseja realmente excluir a campanha "${nome}"?`, () => {
+  showConfirm(`Deseja realmente excluir o programa de ideia "${nome}"?`, () => {
     const idx = DB.programas.findIndex(p => p.programaideia == nome && p.empresa == ME.empresa);
     if (idx >= 0) {
       DB.programas.splice(idx, 1);
@@ -3036,7 +3178,7 @@ function viewBoard() {
               <button class="btn s o" onclick="openCardForm(${c.id})">Editar</button>
               <button class="btn s r" onclick="deleteCard(${c.id})">Excluir</button>
               ${c.status == 'FINALIZADO' ? `<button class="btn s o" onclick="toggleArquivar(${c.id})">${c.arquivado ? 'Desarquivar' : '📦 Arquivar'}</button>` : ''}
-              ${cardComments(c)}
+              <button class="btn s o" title="Abrir o card e ver os comentários" onclick="openCardForm(${c.id})">💬 ${nCardComments(c)}</button>
             </div>`; }).join('')}
         </div>`).join('')}
     </div>
@@ -3207,7 +3349,9 @@ function openCardForm(id) {
     <select id="k6">${[1, 2, 3].map(p => `<option value="${p}" ${p == c.prioridade ? 'selected' : ''}>${p} -${PRIORIDADE[p]}</option>`).join('')}</select>
     <label>Prazo</label><input id="k7" type="date" value="${esc(c.prazo || '')}">
     <button class="btn" onclick="saveCard(${id || 0})">Salvar</button>
-    <button class="btn r" onclick="closeM()">Cancelar</button>`);
+    <button class="btn r" onclick="closeM()">Cancelar</button>
+    ${c.id ? `<div id="kcBox" class="kcbox">${cardChatInner(c)}</div>` : ''}`);
+  scrollCardChat();
 }
 function saveCard(id) {
   if (!$('#k1').value.trim()) return;
@@ -3237,6 +3381,17 @@ function deleteCard(id) {
 }
 
 /* ======================= COMENTÁRIOS DOS CARDS ========================== */
+const nCardComments = c => DB.comentarioscard.filter(x => x.idcardaplicacao == c.id).length;
+const cardChatInner = c => `<h4 style="color:var(--g);margin-bottom:6px">Comentários</h4>` + cardComments(c);
+function scrollCardChat() { const k = document.querySelector('#kcBox .kcm'); if (k) k.scrollTop = k.scrollHeight; }
+function refreshCardChat(id) {
+  const box = $('#kcBox'); if (!box) return;
+  const b = currentBoard(), c = b && b.aplicacaocard.find(x => x.id == id);
+  if (!c) return;
+  box.innerHTML = cardChatInner(c);
+  scrollCardChat();
+  const inp = $('#kc' + id); if (inp) inp.focus();
+}
 function cardComments(c) {
   const list = DB.comentarioscard.filter(x => x.idcardaplicacao == c.id)
     .sort((a, b) => (parseDate(a.data) - parseDate(b.data)) || 0);
@@ -3269,7 +3424,7 @@ function addCardComment(id) {
       mensagem: `${ME.nome} comentou no card "${nome}" do board "${b.board}".` });
   });
   pushNotifications(notifs);
-  save('comentarioscard'); render();
+  save('comentarioscard'); render(); refreshCardChat(id);
 }
 
 /* ================================ METAS ================================= */
@@ -3302,7 +3457,7 @@ function goalCard(m, k) {
   <div class="box idea${atras ? ' late' : ''}">
     <h3>${esc(m.meta)} <span class="badge ${pct >= 100 ? 's-implantada' : 's-implantacao'}">${pct}%</span>${atras ? ' <span class="badge late">⏰ Prazo vencido</span>' : ''}</h3>
     <div class="pbar"><div style="width:${pct}%"></div></div>
-    ${m.campanha ? `<div class="meta">🎯 Campanha: ${esc(m.campanha)} · ${ideiasImplantadas(m.campanha)} de ${m.alvo} ideia(s) implantada(s)</div>` : ''}
+    ${m.campanha ? `<div class="meta">🎯 Programa de ideia: ${esc(m.campanha)} · ${ideiasImplantadas(m.campanha)} de ${m.alvo} ideia(s) implantada(s)</div>` : ''}
     <div class="meta">Criada por ${esc(getUser(m.autor).nome)} em ${esc(m.dataCriacao)} · Previsão de conclusão: ${esc(m.dataPrevisaoConclusao)}</div>
     <div class="meta">Usuários: ${m.usuarios.map(u => esc(getUser(u.email).nome)).join(', ') || '-'}</div>
     ${m.submeta.map((x, j) => `
@@ -3337,13 +3492,13 @@ function openGoalForm() {
     <h3>Nova meta</h3><br>
     <label>Meta</label><input id="m1">
     <label>Previsão de conclusão</label><input id="m2" type="date">
-    <label>Campanha (opcional): a meta mede as ideias implantadas da campanha</label>
+    <label>Programa de ideia (opcional): a meta mede as ideias implantadas do programa de ideia</label>
     <select id="m3" onchange="$('#m4w').style.display=this.value?'':'none'">
-      <option value="">Sem campanha</option>
+      <option value="">Sem programa de ideia</option>
       ${companyPrograms().map(p => `<option value="${esc(p.programaideia)}">${esc(p.programaideia)}</option>`).join('')}
     </select>
     <div id="m4w" style="display:none"><label>Quantidade de ideias a implantar</label><input id="m4" type="number" min="1" value="5"></div>
-    <label>Submetas (obrigatório ao menos uma, exceto em meta ligada a campanha)</label>
+    <label>Submetas (obrigatório ao menos uma, exceto em meta ligada a programa de ideia)</label>
     <div id="msubs"></div>
     <button class="btn s o" onclick="addSubgoalField()">＋ Adicionar submeta</button><br><br>
     <label>Usuários com acesso</label>
@@ -3573,7 +3728,9 @@ async function dismissReset(id) {
   savedLogin.purgeLegacy();
 
   /* sessão do Firebase Authentication (se já estiver logado neste navegador) */
-  const fbUser = await new Promise(res => { const off = fb.auth.onAuthStateChanged(u => { off(); res(u); }); });
+  let fbUser = await new Promise(res => { const off = fb.auth.onAuthStateChanged(u => { off(); res(u); }); });
+  let expirou = false;
+  if (fbUser && sessaoExpirada()) { try { await fb.auth.signOut(); } catch (e) { } loginTsClear(); fbUser = null; expirou = true; }
   if (fbUser) {
     try {
       const pf = (await fb.db.ref('perfis/' + fbUser.uid).get()).val();
@@ -3583,8 +3740,9 @@ async function dismissReset(id) {
       if (r.user) { ME = r.user; return startApp(); }
     } catch (e) { limparSegredos(); }
   }
-  if (hash == '#admin') return renderAdminLogin();
+  if (hash == '#admin') { renderAdminLogin(); if (expirou) $('#am').textContent = SESSAO_MSG; return; }
   renderLogin();
+  if (expirou) $('#lm').textContent = SESSAO_MSG;
 })();
 </script>
 </body>
