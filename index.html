@@ -136,6 +136,18 @@ header.hc .menu {
 .menu {
   position:relative
 }
+#optbtn { position:relative; }
+#optbtn .dot {
+  position:absolute;
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#e53935;
+  top:3px;
+  right:3px;
+  border:1px solid var(--bg2);
+  box-sizing:border-box;
+}
 .drop {
   display:none;
   position:absolute;
@@ -222,7 +234,7 @@ header.hc .menu {
   border-color:var(--g);
   color:var(--g)
 }
-.reaction-icon{display:inline-block;font-size:16px;line-height:1;vertical-align:-2px;margin-right:5px}.act button{display:inline-flex;align-items:center;gap:2px}
+.reaction-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-right:5px;color:currentColor}.reaction-svg{display:block;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.act button{display:inline-flex;align-items:center;gap:2px}
 .cm {
   background:var(--bg3);
   border-radius:10px;
@@ -618,7 +630,7 @@ input[type=date]{max-width:100%;min-width:0}
   margin-right: 6px;
 }
 
-#optbtn{position:relative}
+#optbtn{min-width:42px;position:relative}
 .dot{position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#e53935;border:2px solid #fff;box-sizing:border-box}
 .cta.plain,.login .cta{background:none!important;border:0!important;box-shadow:none!important;color:inherit;text-decoration:underline;padding:4px;display:inline-block;cursor:pointer}
 .bdel{width:100%;margin-top:10px;box-sizing:border-box}
@@ -2367,8 +2379,8 @@ function ideaCard(i, full) {
     ${full && i.parecer ? `<div class="cm"><b>Parecer:</b> ${esc(i.parecer)}</div>` : ''}
     ${full ? historicoHtml(i) : ''}
     <div class="act">
-      <button class="${liked ? 'on' : ''}" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true">👍</span>${likes.length}</button>
-      <button onclick="document.getElementById('c${i.id}').focus()"><span class="reaction-icon comment-icon" aria-hidden="true">💬</span>${comments.length}</button>
+      <button class="${liked ? 'on' : ''}" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true"><svg class="reaction-svg" viewBox="0 0 24 24"><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3zM7 10l5-8a3 3 0 0 1 2 3l-1 5h5a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg></span>${likes.length}</button>
+      <button onclick="document.getElementById('c${i.id}').focus()"><span class="reaction-icon comment-icon" aria-hidden="true"><svg class="reaction-svg" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg></span>${comments.length}</button>
       ${canAdjust ? `<button onclick="openIdeaForm(${i.id})">✏️ Ajustar</button>` : ''}
       ${canEval ? `<button onclick="openEvalForm(${i.id})">🛠 Avaliar</button>` : ''}
       ${canToCard ? `<button onclick="openIdeaToCard(${i.id})">📋 Criar card</button>` : ''}
@@ -2482,8 +2494,8 @@ function slideIdeiaHtml(d) {
     <p>${esc(desc.slice(0, 160))}${desc.length > 160 ? '…' : ''}</p>
     <div class="meta userline">${avatarHtml(getUser(i.emailusuario).nome)}<span>Por ${esc(getUser(i.emailusuario).nome)}</span></div>
     <div class="act" style="margin-top:10px">
-      <button type="button" aria-label="Curtir ideia" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true">👍</span>${ideaLikes(i).length}</button>
-      <button type="button" aria-label="Ver comentários" onclick="go('home');setTimeout(()=>document.getElementById('c${i.id}')?.focus(),0)"><span class="reaction-icon comment-icon" aria-hidden="true">💬</span>${ideaComments(i).length}</button>
+      <button type="button" aria-label="Curtir ideia" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true"><svg class="reaction-svg" viewBox="0 0 24 24"><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3zM7 10l5-8a3 3 0 0 1 2 3l-1 5h5a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg></span>${ideaLikes(i).length}</button>
+      <button type="button" aria-label="Ver comentários" onclick="go('home');setTimeout(()=>document.getElementById('c${i.id}')?.focus(),0)"><span class="reaction-icon comment-icon" aria-hidden="true"><svg class="reaction-svg" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg></span>${ideaComments(i).length}</button>
     </div>
   </div></div>`;
 }
@@ -3785,7 +3797,10 @@ function updateMenuBadge() {
   const btn = $('#optbtn');
   const mnuNotifs = $('#mnuNotifs');
   
-  if (btn) btn.innerHTML = total ? '<span class="dot"></span>' : '';
+  if (btn) {
+    btn.innerHTML = '☰' + (total ? '<span class="dot" aria-hidden="true"></span>' : '');
+    btn.setAttribute('aria-label', total ? `Menu, ${total} notificações pendentes` : 'Menu');
+  }
   if (mnuNotifs) mnuNotifs.innerHTML = `${menuIcon('notifications')} Notificações${nNotifs ? ' (' + nNotifs + ')' : ''}`;
 }
 
