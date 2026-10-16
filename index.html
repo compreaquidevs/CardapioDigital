@@ -164,10 +164,6 @@ header.hc .menu {
 }
 .drop a{display:flex;align-items:center;gap:11px}
 .menu-ico{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.88}
-#optbtn{font-size:0;min-width:42px;position:relative}
-#optbtn:before{content:"";display:block;width:19px;height:14px;margin:auto;border-top:1.7px solid currentColor;border-bottom:1.7px solid currentColor;box-sizing:border-box}
-#optbtn:after{content:"";position:absolute;width:19px;height:1.7px;background:currentColor;left:50%;top:50%;transform:translate(-50%,-50%)}
-#optbtn .dot{font-size:0;position:absolute;right:5px;top:4px;width:7px;height:7px;border-radius:50%;background:#e74c3c}
 .wrap {
   max-width:1150px;
   margin:20px auto;
@@ -2188,18 +2184,18 @@ async function startApp() {
       <div></div>
       ${logoImg('onclick="go(\'home\')"')}
       <div class="menu">
-        <button class="btn" id="optbtn" onclick="$('.drop').classList.toggle('on')"></button>
+        <button class="btn" id="optbtn" onclick="$('.drop').classList.toggle('on')">☰</button>
         <div class="drop">
           <a onclick="go('notificacoes')" id="mnuNotifs">${menuIcon('notifications')} Notificações</a>
           <a onclick="go('home')">${menuIcon('home')} ${t('Home')}</a>
+          <a onclick="go('perfil')">${menuIcon('profile')} ${t('Meu perfil')}</a>
+          ${isApprover() ? `<a onclick="go('programas')">${menuIcon('programs')} ${t('Programa de ideias')}</a>` : ''}
           <a onclick="go('ideias')">${menuIcon('ideas')} Ideias</a>
           ${isApprover() ? `<a onclick="go('score')">${menuIcon('score')} ${t('Score')}</a>` : ''}
-          <a onclick="go('perfil')">${menuIcon('profile')} ${t('Meu perfil')}</a>
-          <a onclick="go('problemas')">${menuIcon('report')} ${t('Reportar problema')}</a>
-          <a onclick="go('metas')">${menuIcon('goals')} ${t('Metas')}</a>
-          ${isApprover() ? `<a onclick="go('programas')">${menuIcon('programs')} ${t('Programa de ideias')}</a><a onclick="go('indicadores')">${menuIcon('indicators')} ${t('Indicadores')}</a>` : ''}
-          ${isAdmin() ? `<a onclick="go('usuarios')">${menuIcon('users')} ${t('Gestão de usuários')}</a>` : ''}
           <a onclick="go('kanban')">${menuIcon('application')} Aplicação da ideia</a>
+          <a onclick="go('metas')">${menuIcon('goals')} ${t('Metas')}</a>
+          ${isApprover() ? `<a onclick="go('indicadores')">${menuIcon('indicators')} ${t('Indicadores')}</a>` : ''}
+          ${isAdmin() ? `<a onclick="go('usuarios')">${menuIcon('users')} ${t('Gestão de usuários')}</a>` : ''}
           <a onclick="go('cursos')">${menuIcon('learning')} ${t('Aprendendo a inovar')}</a>
           <a onclick="logout()">${menuIcon('logout')} ${t('Sair')}</a>
         </div>
@@ -2486,8 +2482,8 @@ function slideIdeiaHtml(d) {
     <p>${esc(desc.slice(0, 160))}${desc.length > 160 ? '…' : ''}</p>
     <div class="meta userline">${avatarHtml(getUser(i.emailusuario).nome)}<span>Por ${esc(getUser(i.emailusuario).nome)}</span></div>
     <div class="act" style="margin-top:10px">
-      <button type="button" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true">👍</span>${ideaLikes(i).length}</button>
-      <button type="button" onclick="go('home');setTimeout(()=>document.getElementById('c${i.id}')?.focus(),0)"><span class="reaction-icon comment-icon" aria-hidden="true">💬</span>${ideaComments(i).length}</button>
+      <button type="button" aria-label="Curtir ideia" onclick="toggleLike(${i.id})"><span class="reaction-icon like-icon" aria-hidden="true">👍</span>${ideaLikes(i).length}</button>
+      <button type="button" aria-label="Ver comentários" onclick="go('home');setTimeout(()=>document.getElementById('c${i.id}')?.focus(),0)"><span class="reaction-icon comment-icon" aria-hidden="true">💬</span>${ideaComments(i).length}</button>
     </div>
   </div></div>`;
 }
@@ -2534,7 +2530,7 @@ function viewHome() {
   const imgs = carouselImgs();
   const total = imgs.length + (dm ? 1 : 0);
   return `
-  <div class="wrap${isApprover() ? '' : ' one'}">
+  <div class="wrap">
     <div>
       <div class="car">
         ${dm ? slideIdeiaHtml(dm) : ''}
@@ -2549,9 +2545,8 @@ function viewHome() {
         <input id="busca" type="search" autocomplete="off" placeholder="🔍 Buscar ideias por texto, autor ou programa de ideia..." value="${esc(BUSCA.q)}" oninput="setBusca(this.value)" style="margin-bottom:6px">
       </div>
       <div id="feedLista">${feedListHtml()}</div>
-      ${!isApprover() ? `<div class="box" id="rankBox">${rankingInner(8)}</div>` : ''}
     </div>
-    ${isApprover() ? `<aside><div class="box" id="rankBox">${rankingInner()}</div></aside>` : ''}
+    <aside><div class="box" id="rankBox">${rankingInner(isApprover() ? 0 : 8)}</div></aside>
   </div>`;
 }
 
