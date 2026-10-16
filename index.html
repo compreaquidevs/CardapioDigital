@@ -604,6 +604,7 @@ input[type=date]{max-width:100%;min-width:0}
 .car .sl.ideia p { margin:8px auto 0; max-width:700px; overflow-wrap:anywhere; }
 .idea-month-meta { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:6px 16px; margin:12px auto 0; max-width:100%; font-size:.9rem; line-height:1.5; color:#f1f1f1; }
 .idea-month-meta span { min-width:0; overflow-wrap:anywhere; }
+.idea-month-meta .idea-month-separator { opacity:.85; font-weight:700; }
 @media (max-width:600px) { .car .sl { padding:18px 42px 34px; } .idea-month-meta { gap:4px 10px; font-size:.82rem; } .car .sl.ideia h2 { font-size:1.2rem; } .car .sl.ideia p { font-size:.9rem; } }
 .brow { display:flex; align-items:center; gap:10px; margin:5px 0; font-size:.88rem }
 .brow .bl { width:120px; flex:none; color:var(--mut); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -2502,7 +2503,9 @@ function slideIdeiaHtml(d) {
     <p>${esc(desc.slice(0, 160))}${desc.length > 160 ? '…' : ''}</p>
     <div class="idea-month-meta">
       <span><b>AUTOR:</b> ${esc(getUser(i.emailusuario).nome)}</span>
+      <span class="idea-month-separator" aria-hidden="true">·</span>
       <span>${ideaLikes(i).length} curtidas</span>
+      <span class="idea-month-separator" aria-hidden="true">·</span>
       <span>${ideaComments(i).length} comentários</span>
     </div>
   </div></div>`;
@@ -2638,8 +2641,7 @@ function indicadorHtml(base = filtraTodas(true)) {
 
 function listaTodasHtml() {
   const list = byNewest(filtraTodas(false));
-  return `<div class="box">${indicadorHtml()}</div>
-    ${list.map(i => ideaCard(i, true)).join('') || '<div class="box">Nenhuma ideia encontrada.</div>'}`;
+  return `${list.map(i => ideaCard(i, true)).join('') || '<div class="box">Nenhuma ideia encontrada.</div>'}`;
 }
 
 function setFiltroTodas(campo, valor) {
@@ -2914,9 +2916,36 @@ const barrasHtml = rows => {
   return rows.map(r => `<div class="brow"><span class="bl" title="${esc(r.l)}">${esc(r.l)}</span><div class="bt"><div style="width:${r.v * 100 / max}%"></div></div><b>${r.v}</b></div>`).join('');
 };
 
+const FILTRO_INDICADORES = { de: '', ate: '', campanha: '', status: '' };
+
+function filtraIndicadores() {
+  const f = FILTRO_INDICADORES;
+  const de = f.de ? new Date(f.de + 'T00:00:00') : null;
+  const ate = f.ate ? new Date(f.ate + 'T23:59:59') : null;
+  return ideiasBaseTodas().filter(i => {
+    if (i.status === 'rascunho') return false;
+    if (de || ate) {
+      const d = parseDate(i.data);
+      if (isNaN(d) || (de && d < de) || (ate && d > ate)) return false;
+    }
+    if (f.campanha && i.programaideia !== f.campanha) return false;
+    if (f.status && i.status !== f.status) return false;
+    return true;
+  });
+}
+function setFiltroIndicadores(campo, valor) {
+  FILTRO_INDICADORES[campo] = valor;
+  render();
+}
+function limparFiltroIndicadores() {
+  Object.assign(FILTRO_INDICADORES, { de: '', ate: '', campanha: '', status: '' });
+  render();
+}
+
 function viewIndicadores() {
   if (!isApprover()) return '<div class="wrap one"><div class="box">Acesso restrito a aprovadores.</div></div>';
-  const base = ideiasBaseTodas().filter(i => i.status != 'rascunho');
+  const f = FILTRO_INDICADORES;
+  const base = filtraIndicadores();
   const aprov = base.filter(i => ['em implantação', 'implantada'].includes(i.status)).length;
   const repr = base.filter(i => i.status == 'reprovada').length;
   const taxa = aprov + repr ? Math.round(aprov * 100 / (aprov + repr)) : null;
@@ -2924,7 +2953,6 @@ function viewIndicadores() {
   const medio = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : null;
   const emAvaliacao = base.filter(i => STATUS_AVALIACAO.includes(i.status));
   const atrasadas = emAvaliacao.filter(ideaAtrasada).length;
-
   const hoje = new Date(), meses = [];
   for (let k = 11; k >= 0; k--) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() - k, 1);
@@ -2934,10 +2962,22 @@ function viewIndicadores() {
   const camp = {};
   base.forEach(i => { const c = i.programaideia || '(sem programa de ideia)'; camp[c] = (camp[c] || 0) + 1; });
   const topCamp = Object.entries(camp).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([l, v]) => ({ l, v }));
-
   return `
   <div class="wrap one"><div>
     <h2>Indicadores</h2><br>
+    <div class="box filtros">
+      <div><label>Data inicial</label><input type="date" value="${esc(f.de)}" onchange="setFiltroIndicadores('de',this.value)"></div>
+      <div><label>Data final</label><input type="date" value="${esc(f.ate)}" onchange="setFiltroIndicadores('ate',this.value)"></div>
+      <div><label>Campanha</label><select onchange="setFiltroIndicadores('campanha',this.value)">
+        <option value="">Todas as campanhas</option>
+        ${companyPrograms().map(p => `<option value="${esc(p.programaideia)}" ${p.programaideia == f.campanha ? 'selected' : ''}>${esc(p.programaideia)}</option>`).join('')}
+      </select></div>
+      <div><label>Status</label><select onchange="setFiltroIndicadores('status',this.value)">
+        <option value="">Todos os status</option>
+        ${STATUS.filter(x => x != 'rascunho').map(x => `<option value="${esc(x)}" ${x == f.status ? 'selected' : ''}>${esc(x)}</option>`).join('')}
+      </select></div>
+      <div><button class="btn r" style="width:100%" onclick="limparFiltroIndicadores()">Limpar filtros</button></div>
+    </div>
     <div class="feats">
       <div class="box"><div class="kpi">${base.length}</div><p class="meta">ideias enviadas</p></div>
       <div class="box"><div class="kpi">${taxa == null ? '-' : taxa + '%'}</div><p class="meta">taxa de aprovação (em implantação + implantadas ÷ decididas)</p></div>
@@ -2945,7 +2985,7 @@ function viewIndicadores() {
       <div class="box ${atrasadas ? 'late' : ''}"><div class="kpi" style="${atrasadas ? 'color:#ff6b6b' : ''}">${atrasadas}</div><p class="meta">ideias atrasadas na avaliação (de ${emAvaliacao.length} em avaliação · prazo ${PRAZO_AVALIACAO_DIAS} dias)</p></div>
     </div>
     <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Ideias por mês</h3>${barrasHtml(porMes)}</div>
-    <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Programas de ideia mais ativos</h3>${topCamp.length ? barrasHtml(topCamp) : '<p class="meta">Sem dados.</p>'}</div>
+    <div class="box"><h3 style="color:var(--g);margin-bottom:8px">Campanhas mais ativas</h3>${topCamp.length ? barrasHtml(topCamp) : '<p class="meta">Sem dados.</p>'}</div>
     <div class="box">${indicadorHtml(base)}</div>
   </div></div>`;
 }
