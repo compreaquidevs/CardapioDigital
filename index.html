@@ -38,6 +38,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .card.back{background:repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a 6px,#2c4fb3 6px,#2c4fb3 12px);border:3px solid #fff}
 .card.empty{background:transparent;border:2px dashed #ffffff60;box-shadow:none}
 .card.sel{transform:translateY(-14px);outline:3px solid var(--accent)}
+.card.won{outline:3px solid var(--accent)}
 .card.can{cursor:pointer}
 .card.can:hover{transform:translateY(-5px)}
 .card.sel:hover{transform:translateY(-14px)}
@@ -57,6 +58,8 @@ var SU=["♠","♥","♦","♣"], RK=["2","3","4","5","6","Q","J","K","7","A"], 
 var app=document.getElementById("app");
 var CFG={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"},{urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"}]};
 var peer=null, conn=null, isHost=false, me=-1, myName="", code="", S=null, G=null, err="", closed=false;
+var left=false, resuming=false, holdUntil=0, shownSeq=0, lastRx=0, retryTimer=null, hostTries=0, wl=null;
+var HOLD_MS=4000;
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function suit(n){return Math.floor(n/10);} function idx(n){return n%10;} function pts(n){return PT[idx(n)];}
 function name(n){return RK[idx(n)]+SU[suit(n)];}
@@ -65,7 +68,7 @@ function sortHand(h){return h.slice().sort(function(a,b){return suit(a)-suit(b)|
 function dealInto(g,first){
   var d=shuffle(Array.from({length:40},function(_,i){return i;}));
   g.h0=d.slice(0,3);g.h1=d.slice(3,6);g.stock=d.slice(6);g.trump=suit(g.stock[0]);
-  g.t0=-1;g.t1=-1;g.s0=0;g.s1=0;g.turn=first;g.winner=null;g.status="playing";return g;
+  g.t0=-1;g.t1=-1;g.s0=0;g.s1=0;g.seq=0;g.last=null;g.turn=first;g.winner=null;g.status="playing";return g;
 }
 function genCode(){var a="ABCDEFGHJKLMNPQRSTUVWXYZ",s="";for(var i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
 function saveName(){try{localStorage.setItem("bisca_name",myName);}catch(e){}}
@@ -86,7 +89,8 @@ function applyPlay(who,c){
   if(G["t"+lead]<0){ G["t"+who]=c; G.turn=lead; G.log=G["p"+who].name+" jogou "+name(c)+"."; return; }
   var lc=G["t"+lead], w;
   if(suit(c)===suit(lc)) w=idx(c)>idx(lc)?who:lead; else if(suit(c)===G.trump) w=who; else w=lead;
-  var gain=pts(c)+pts(lc);
+  var gain=pts(c)+pts(lc), ca={}; ca[who]=c; ca[lead]=lc;
+  G.seq=(G.seq||0)+1; G.last={c0:ca[0],c1:ca[1],w:w,gain:gain};
   G["s"+w]+=gain;
   if(G.stock.length){ G["h"+w].push(G.stock.pop()); G["h"+(1-w)].push(G.stock.pop()); }
   G.t0=-1;G.t1=-1;G.turn=w;
@@ -100,49 +104,152 @@ function viewFor(who){
   v.stock=v.stock.map(function(x,i){return i===0?x:-1;});
   return v;
 }
-function broadcast(){ S=G; if(conn&&conn.open) conn.send({t:"state",s:viewFor(1)}); render(); }
+function broadcast(){ S=G; saveSess(); if(conn&&conn.open){try{conn.send({t:"state",s:viewFor(1)});}catch(e){}} render(); }
+
+/* ---------- sessão salva (para retomar após tela apagar / recarregar) ---------- */
+function saveSess(){ if(left||!code)return; try{localStorage.setItem("bisca_sess",JSON.stringify({code:code,host:isHost,name:myName,G:isHost?G:null,t:Date.now()}));}catch(e){} }
+function clearSess(){ try{localStorage.removeItem("bisca_sess");}catch(e){} }
+function loadSess(){ try{var s=JSON.parse(localStorage.getItem("bisca_sess")||"null"); if(s&&s.code&&Date.now()-s.t<6*3600*1000)return s;}catch(e){} return null; }
+
+/* ---------- manter a tela acesa ---------- */
+function wake(){
+  try{ if(navigator.wakeLock&&!wl&&!document.hidden){
+    navigator.wakeLock.request("screen").then(function(l){ wl=l; l.addEventListener("release",function(){wl=null;}); }).catch(function(){});
+  } }catch(e){}
+}
+function unwake(){ try{if(wl)wl.release();}catch(e){} wl=null; }
 
 /* ---------- rede (PeerJS, ponto a ponto) ---------- */
 function needPeer(){ if(typeof Peer==="undefined"){err="Não foi possível carregar a biblioteca de rede. Verifique a internet.";render();return false;} return true; }
-function createRoom(nm){
-  if(!needPeer())return; myName=nm; saveName(); code=genCode(); isHost=true; me=0;
-  peer=new Peer("bisca-"+code,{config:CFG});
-  peer.on("open",function(){S={status:"waiting",code:code,p0:{name:nm}};render();});
-  peer.on("error",function(e){ if(e.type==="unavailable-id"){createRoom(nm);} else {err="Erro de rede: "+e.type;S=null;render();} });
-  peer.on("connection",function(c){
-    if(conn&&conn.open){c.close();return;}
-    conn=c;
+function onState(s){ if(!S||S.status==="waiting") shownSeq=s.seq||0; closed=false; S=s; render(); }
+
+function hostPeer(){
+  if(left)return;
+  var old=peer; peer=null; try{if(old)old.destroy();}catch(e){}
+  var p=new Peer("bisca-"+code,{config:CFG}); peer=p;
+  p.on("open",function(){
+    if(p!==peer)return; hostTries=0; resuming=false;
+    S=G?G:{status:"waiting",code:code,p0:{name:myName}};
+    saveSess(); render();
+  });
+  p.on("disconnected",function(){
+    if(p!==peer||left)return;
+    setTimeout(function(){ if(p===peer&&!left&&p.disconnected){try{p.reconnect();}catch(e){}} },1000);
+  });
+  p.on("error",function(e){
+    if(p!==peer||left)return;
+    if(e.type==="unavailable-id"){
+      if(resuming||G){
+        if(++hostTries<20){ setTimeout(hostPeer,2500); return; }
+        leave(); err="Não foi possível retomar a sala. Crie uma nova."; return render();
+      }
+      code=genCode(); hostPeer(); return;
+    }
+    if(S){ setTimeout(function(){ if(p!==peer||left)return; if(p.destroyed){hostTries=0;hostPeer();} else if(p.disconnected){try{p.reconnect();}catch(x){}} },3000); return; }
+    err="Erro de rede: "+e.type; S=null; render();
+  });
+  p.on("connection",function(c){
+    if(conn&&conn.open&&conn!==c){ if(!G){c.close();return;} try{conn.close();}catch(e){} }
+    conn=c; lastRx=Date.now();
     c.on("data",function(m){
-      if(m.t==="hi"){
-        G=dealInto({code:code,p0:{name:myName},p1:{name:String(m.name).slice(0,16)},log:""},0);
-        G.log="Jogo iniciado! "+myName+" começa."; broadcast();
+      if(c!==conn)return; lastRx=Date.now();
+      if(m.t==="ping"){ try{c.send({t:"pong"});}catch(e){} }
+      else if(m.t==="hi"){
+        if(G){ closed=false; broadcast(); }
+        else{
+          G=dealInto({code:code,p0:{name:myName},p1:{name:String(m.name).slice(0,16)},log:""},0);
+          G.log="Jogo iniciado! "+myName+" começa."; broadcast();
+        }
       }else if(m.t==="play"){ applyPlay(1,m.c); broadcast(); }
       else if(m.t==="rematch"){ applyRematch(); broadcast(); }
     });
-    c.on("close",function(){ if(S&&S.status!=="waiting"){closed=true;render();} });
+    c.on("close",function(){ if(c!==conn)return; if(S&&S.status!=="waiting"){closed=true;render();} });
   });
-  render();
+}
+function createRoom(nm){
+  if(!needPeer())return;
+  left=false; resuming=false; myName=nm; saveName(); code=genCode(); isHost=true; me=0; G=null; S=null; hostTries=0;
+  wake(); hostPeer(); render();
+}
+
+function scheduleGuestRetry(){
+  if(left||isHost||retryTimer)return;
+  retryTimer=setTimeout(function(){ retryTimer=null; guestConnect(); },2000);
+}
+function guestConnect(){
+  if(left)return;
+  var old=peer; peer=null; conn=null; try{if(old)old.destroy();}catch(e){}
+  var p=new Peer(undefined,{config:CFG}); peer=p;
+  var fresh=!S&&!resuming;
+  function fail(msg){
+    if(p!==peer||left)return;
+    if(fresh){ err=msg; S=null; try{p.destroy();}catch(e){} peer=null; conn=null; render(); }
+    else{ closed=true; render(); scheduleGuestRetry(); }
+  }
+  p.on("error",function(e){ fail(e.type==="peer-unavailable"?"Sala não encontrada.":"Erro de rede: "+e.type); });
+  p.on("disconnected",function(){ if(p===peer&&!left){try{p.reconnect();}catch(e){}} });
+  p.on("open",function(){
+    if(p!==peer||left)return;
+    var c=p.connect("bisca-"+code,{reliable:true}); conn=c;
+    var to=setTimeout(function(){ if(p===peer&&!c.open) fail("Não conseguiu conectar. Confira o código e se o anfitrião está com a sala aberta."); },15000);
+    c.on("open",function(){ clearTimeout(to); if(p!==peer)return; err=""; lastRx=Date.now(); c.send({t:"hi",name:myName}); });
+    c.on("data",function(m){
+      if(p!==peer)return; lastRx=Date.now();
+      if(m.t==="ping"){ try{c.send({t:"pong"});}catch(e){} }
+      else if(m.t==="state"){ resuming=false; onState(m.s); saveSess(); }
+    });
+    var lost=function(){ clearTimeout(to); if(p!==peer||left)return; if(!S&&!resuming)return; closed=true; render(); scheduleGuestRetry(); };
+    c.on("close",lost); c.on("error",lost);
+  });
 }
 function joinRoom(c,nm){
-  if(!needPeer())return; code=c.toUpperCase().trim(); myName=nm; saveName(); isHost=false; me=1;
-  err="Conectando…"; render();
-  peer=new Peer(undefined,{config:CFG});
-  peer.on("error",function(e){ err=e.type==="peer-unavailable"?"Sala não encontrada.":"Erro de rede: "+e.type; S=null; render(); });
-  peer.on("open",function(){
-    conn=peer.connect("bisca-"+code,{reliable:true});
-    var to=setTimeout(function(){ if(!S){err="Não conseguiu conectar. Confira o código e se o anfitrião está com a sala aberta.";try{peer.destroy();}catch(e){}render();} },20000);
-    conn.on("open",function(){ clearTimeout(to); err=""; conn.send({t:"hi",name:nm}); });
-    conn.on("data",function(m){ if(m.t==="state"){S=m.s;render();} });
-    conn.on("close",function(){ closed=true; render(); });
-  });
+  if(!needPeer())return;
+  left=false; resuming=false; code=c.toUpperCase().trim(); myName=nm; saveName(); isHost=false; me=1; S=null;
+  err="Conectando…"; wake(); render(); guestConnect();
 }
-function leave(){ try{if(conn)conn.close();if(peer)peer.destroy();}catch(e){} peer=conn=null;S=G=null;closed=false;err="";me=-1;render(); }
+function resumeSession(s){
+  if(!needPeer())return;
+  left=false; resuming=true; code=s.code; myName=s.name; isHost=!!s.host; me=isHost?0:1; wake();
+  if(isHost){ G=s.G||null; if(G){S=G;shownSeq=G.seq||0;closed=true;} hostTries=0; hostPeer(); }
+  else{ guestConnect(); }
+  render();
+}
+function ensureAlive(){
+  if(left||!code||(!S&&!resuming))return;
+  if(isHost){
+    if(!peer||peer.destroyed) hostPeer();
+    else if(peer.disconnected){ try{peer.reconnect();}catch(e){} }
+  }else{
+    if(!conn||!conn.open){ clearTimeout(retryTimer); retryTimer=null; guestConnect(); }
+  }
+  if(conn&&conn.open){ lastRx=Date.now()-9000; try{conn.send({t:"ping"});}catch(e){} }
+}
+document.addEventListener("visibilitychange",function(){ if(!document.hidden){ wake(); ensureAlive(); } });
+window.addEventListener("online",ensureAlive);
+window.addEventListener("pageshow",function(){ wake(); ensureAlive(); });
+/* batimento: detecta conexão "morta" depois que o celular volta do repouso */
+setInterval(function(){
+  if(left||!code||!conn||!conn.open)return;
+  try{conn.send({t:"ping"});}catch(e){}
+  if(Date.now()-lastRx>12000){
+    if(isHost){ if(S&&S.status!=="waiting"){closed=true;render();} try{conn.close();}catch(e){} }
+    else{ closed=true; render(); try{conn.close();}catch(e){} clearTimeout(retryTimer); retryTimer=null; guestConnect(); }
+  }
+},4000);
+
+function leave(){
+  left=true; clearTimeout(retryTimer); retryTimer=null; resuming=false;
+  var p=peer; peer=null; var c=conn; conn=null;
+  try{if(c)c.close();if(p)p.destroy();}catch(e){}
+  unwake(); clearSess();
+  S=G=null;closed=false;err="";me=-1;code="";holdUntil=0;shownSeq=0;render();
+}
 function act(msg){
   if(isHost){ if(msg.t==="play")applyPlay(0,msg.c); else applyRematch(); broadcast(); }
   else if(conn&&conn.open){ conn.send(msg); }
 }
 function playCard(c){
-  if(!S||S.status!=="playing"||S.turn!==me||S["t"+me]>=0)return;
+  if(!S||S.status!=="playing"||S.turn!==me||S["t"+me]>=0||Date.now()<holdUntil)return;
   var f=mustFollow(S,me); if(f!==null&&suit(c)!==f){err="Com o monte vazio, você deve seguir o naipe "+SU[f]+".";return render();}
   act({t:"play",c:c});
 }
@@ -150,10 +257,22 @@ function playCard(c){
 /* ---------- interface ---------- */
 function cardHTML(n,o){
   o=o||{}; var red=suit(n)===1||suit(n)===2;
-  return '<button class="card'+(red?" red":"")+(o.can?" can":"")+'" data-c="'+n+'"'+(o.can?"":' tabindex="-1"')+'><span>'+RK[idx(n)]+SU[suit(n)]+'</span><span class="s">'+SU[suit(n)]+'</span><span class="r2">'+RK[idx(n)]+'</span></button>';
+  return '<button class="card'+(red?" red":"")+(o.can?" can":"")+(o.won?" won":"")+'" data-c="'+n+'"'+(o.can?"":' tabindex="-1"')+'><span>'+RK[idx(n)]+SU[suit(n)]+'</span><span class="s">'+SU[suit(n)]+'</span><span class="r2">'+RK[idx(n)]+'</span></button>';
+}
+function tableCell(c,label,won){
+  return '<div style="text-align:center">'+(c>=0?cardHTML(c,{won:won}):'<div class="card empty"></div>')+'<div style="font-size:11px;opacity:.8;margin-top:3px">'+esc(label)+'</div></div>';
 }
 function backs(n){var s="";for(var i=0;i<n;i++)s+='<div class="card back" style="width:34px;height:48px"></div>';return s;}
 function render(){
+  if(S&&S.status!=="waiting"){
+    var sq=S.seq||0;
+    if(sq>shownSeq){ shownSeq=sq; holdUntil=Date.now()+HOLD_MS; setTimeout(render,HOLD_MS+60); }
+    else if(sq<shownSeq){ shownSeq=sq; holdUntil=0; }
+  }
+  if(!S&&resuming){
+    app.innerHTML='<h1>🃏 Bisca</h1><div class="panel" style="text-align:center">Reconectando à sala <b>'+esc(code)+'</b>…<p style="color:var(--muted)">Aguarde alguns segundos.</p><button id="lv" class="sec">Cancelar</button></div>';
+    document.getElementById("lv").onclick=leave; return;
+  }
   if(!S){
     app.innerHTML='<h1>🃏 Bisca</h1><p class="sub">Baralho online para 2 jogadores</p>'+
     '<div class="panel"><label>Seu nome<input id="nm" maxlength="16" placeholder="Ex.: Ana" value="'+esc(myName||loadName())+'"></label>'+
@@ -176,19 +295,21 @@ function render(){
     document.getElementById("lv").onclick=leave; return;
   }
   var opp=1-me, over=S.status==="over", myTurn=S.turn===me&&!over, oppName=S["p"+opp].name, f=myTurn?mustFollow(S,me):null;
+  var holding=!!(S.last&&Date.now()<holdUntil), canPlay=myTurn&&!holding;
   var h='<div class="bar"><h1 style="margin:0">🃏 Bisca</h1><span class="pill">Sala '+S.code+'</span><span class="pill">Trunfo '+SU[S.trump]+'</span><button class="sec" id="lv" style="color:#fff">Sair</button></div>';
-  if(closed) h+='<div class="turn">⚠️ A conexão com o outro jogador caiu.</div>';
+  if(closed) h+='<div class="turn">⚠️ Conexão perdida. Tentando reconectar…</div>';
   h+='<div class="opp"><div style="text-align:center;margin-bottom:4px">'+esc(oppName)+' · '+S["h"+opp].length+' cartas</div><div class="hand" style="min-height:52px">'+backs(S["h"+opp].length)+'</div></div>';
   if(over){
     h+='<div class="win">'+(S.winner===-1?"Empate em 60 a 60!":(S.winner===me?"🎉 Você venceu!":"😮 "+esc(oppName)+" venceu."))+'<div style="font-size:16px;font-weight:500;margin-top:4px">Você '+S["s"+me]+' × '+S["s"+opp]+' '+esc(oppName)+'</div></div>';
   }else{
-    h+='<div class="turn'+(myTurn?" me":"")+'">'+(myTurn?(S["t"+opp]>=0?"Sua vez: responda a carta":"Sua vez: jogue uma carta"):"Vez de "+esc(oppName)+"…")+'</div>';
+    if(holding) h+='<div class="turn">'+(S.last.w===me?"Você levou a vaza":esc(oppName)+" levou a vaza")+' · +'+S.last.gain+' pts</div>';
+    else h+='<div class="turn'+(myTurn?" me":"")+'">'+(myTurn?(S["t"+opp]>=0?"Sua vez: responda a carta":"Sua vez: jogue uma carta"):"Vez de "+esc(oppName)+"…")+'</div>';
   }
+  var oppC=holding?S.last["c"+opp]:S["t"+opp], meC=holding?S.last["c"+me]:S["t"+me];
   h+='<div class="mid"><div class="pile">'+(S.stock.length?'<div style="display:flex;align-items:center"><div class="card back"></div><div style="margin-left:-34px;transform:rotate(90deg);margin-right:20px">'+cardHTML(S.stock[0])+'</div></div>':'<div class="card empty"></div>')+'<div>Monte ('+S.stock.length+')</div></div>'+
-     '<div class="pile"><div class="hand" style="min-height:80px;min-width:120px;flex-wrap:nowrap">'+
-     (S["t"+opp]>=0?cardHTML(S["t"+opp]):'<div class="card empty"></div>')+(S["t"+me]>=0?cardHTML(S["t"+me]):'<div class="card empty"></div>')+'</div><div>Mesa</div></div></div>';
-  h+='<div class="msg">'+esc(err||S.log||"")+'</div>';
-  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:myTurn&&(f===null||suit(c)===f)});}).join("")+'</div>';
+     '<div class="pile"><div class="hand" style="min-height:80px;min-width:150px;flex-wrap:nowrap;gap:12px">'+tableCell(oppC,oppName,holding&&S.last.w===opp)+tableCell(meC,"Você",holding&&S.last.w===me)+'</div><div>Mesa</div></div></div>';
+  h+='<div class="msg">'+esc(err||(holding?"":S.log)||"")+'</div>';
+  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:canPlay&&(f===null||suit(c)===f)});}).join("")+'</div>';
   h+='<div class="msg" style="margin-top:10px">Seus pontos: <b>'+S["s"+me]+'</b>'+(f!==null?' · siga o naipe '+SU[f]:"")+'</div>';
   if(over) h+='<div class="actions"><button id="rm">Jogar de novo</button></div>';
   app.innerHTML=h; err="";
@@ -196,7 +317,7 @@ function render(){
   app.querySelectorAll(".hand .card.can").forEach(function(b){b.onclick=function(){playCard(+b.dataset.c);};});
   var rm=document.getElementById("rm"); if(rm)rm.onclick=function(){act({t:"rematch"});};
 }
-render();
+var _s=loadSess(); if(_s) resumeSession(_s); else render();
 })();
 </script>
 </body>
