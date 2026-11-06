@@ -59,7 +59,7 @@ var app=document.getElementById("app");
 var CFG={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"},{urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"}]};
 var peer=null, conn=null, isHost=false, me=-1, myName="", code="", S=null, G=null, err="", closed=false;
 var left=false, resuming=false, holdUntil=0, shownSeq=0, lastRx=0, retryTimer=null, hostTries=0, wl=null;
-var HOLD_MS=4000;
+var HOLD_MS=2500;
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function suit(n){return Math.floor(n/10);} function idx(n){return n%10;} function pts(n){return PT[idx(n)];}
 function name(n){return RK[idx(n)]+SU[suit(n)];}
@@ -250,7 +250,7 @@ setInterval(function(){
     if(isHost){ if(S&&S.status!=="waiting"){closed=true;render();} try{conn.close();}catch(e){} }
     else{ closed=true; render(); try{conn.close();}catch(e){} clearTimeout(retryTimer); retryTimer=null; guestConnect(); }
   }
-},4000);
+},2500);
 
 function leave(){
   left=true; clearTimeout(retryTimer); retryTimer=null; resuming=false;
