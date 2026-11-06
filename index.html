@@ -75,15 +75,9 @@ function saveName(){try{localStorage.setItem("bisca_name",myName);}catch(e){}}
 function loadName(){try{return localStorage.getItem("bisca_name")||"";}catch(e){return "";}}
 
 /* ---------- lógica (roda só no anfitrião) ---------- */
-function mustFollow(St,who){
-  if(St["t"+(1-who)]<0||St.stock.length) return null;
-  var ls=suit(St["t"+(1-who)]);
-  return St["h"+who].some(function(c){return suit(c)===ls;})?ls:null;
-}
 function applyPlay(who,c){
   if(!G||G.status!=="playing"||G.turn!==who||G["t"+who]>=0) return;
   if(G["h"+who].indexOf(c)<0) return;
-  var f=mustFollow(G,who); if(f!==null&&suit(c)!==f) return;
   var hand=G["h"+who].filter(function(x){return x!==c;}), lead=1-who;
   G["h"+who]=hand;
   if(G["t"+lead]<0){ G["t"+who]=c; G.turn=lead; G.log=G["p"+who].name+" jogou "+name(c)+"."; return; }
@@ -250,7 +244,6 @@ function act(msg){
 }
 function playCard(c){
   if(!S||S.status!=="playing"||S.turn!==me||S["t"+me]>=0||Date.now()<holdUntil)return;
-  var f=mustFollow(S,me); if(f!==null&&suit(c)!==f){err="Com o monte vazio, você deve seguir o naipe "+SU[f]+".";return render();}
   act({t:"play",c:c});
 }
 
@@ -283,7 +276,7 @@ function render(){
     (err?'<p style="color:#c62828">'+esc(err)+'</p>':'')+'</div>'+
     '<details><summary>Como jogar</summary><div class="panel">Baralho de 40 cartas (sem 8, 9 e 10). Cada um recebe 3 cartas e uma carta vira o <b>trunfo</b>. '+
     'Vence a vaza a carta mais forte do naipe jogado, ou qualquer trunfo. Ordem: A, 7, K, J, Q, 6, 5, 4, 3, 2. Pontos: A=11, 7=10, K=4, J=3, Q=2, demais 0. '+
-    'Quem ganha a vaza compra primeiro. Com o monte vazio, é obrigatório seguir o naipe. Mais de 60 pontos vence; 60 é empate.</div></details>';
+    'Quem ganha a vaza compra primeiro. Mais de 60 pontos vence; 60 é empate.</div></details>';
     var nm=document.getElementById("nm");
     document.getElementById("mk").onclick=function(){var n=nm.value.trim();if(!n){err="Digite seu nome.";return render();}err="";createRoom(n);};
     document.getElementById("jn").onclick=function(){var n=nm.value.trim(),c=document.getElementById("cd").value.trim();if(!n||c.length<4){err="Informe nome e código.";return render();}joinRoom(c,n);};
@@ -294,7 +287,7 @@ function render(){
     '<p style="color:var(--muted)">Ele deve abrir este mesmo arquivo/site e clicar em Entrar na sala.<br>Mantenha esta aba aberta. Esperando…</p><button id="lv" class="sec">Cancelar</button></div>';
     document.getElementById("lv").onclick=leave; return;
   }
-  var opp=1-me, over=S.status==="over", myTurn=S.turn===me&&!over, oppName=S["p"+opp].name, f=myTurn?mustFollow(S,me):null;
+  var opp=1-me, over=S.status==="over", myTurn=S.turn===me&&!over, oppName=S["p"+opp].name;
   var holding=!!(S.last&&Date.now()<holdUntil), canPlay=myTurn&&!holding;
   var h='<div class="bar"><h1 style="margin:0">🃏 Bisca</h1><span class="pill">Sala '+S.code+'</span><span class="pill">Trunfo '+SU[S.trump]+'</span><button class="sec" id="lv" style="color:#fff">Sair</button></div>';
   if(closed) h+='<div class="turn">⚠️ Conexão perdida. Tentando reconectar…</div>';
@@ -309,8 +302,8 @@ function render(){
   h+='<div class="mid"><div class="pile">'+(S.stock.length?'<div style="display:flex;align-items:center"><div class="card back"></div><div style="margin-left:-34px;transform:rotate(90deg);margin-right:20px">'+cardHTML(S.stock[0])+'</div></div>':'<div class="card empty"></div>')+'<div>Monte ('+S.stock.length+')</div></div>'+
      '<div class="pile"><div class="hand" style="min-height:80px;min-width:150px;flex-wrap:nowrap;gap:12px">'+tableCell(oppC,oppName,holding&&S.last.w===opp)+tableCell(meC,"Você",holding&&S.last.w===me)+'</div><div>Mesa</div></div></div>';
   h+='<div class="msg">'+esc(err||(holding?"":S.log)||"")+'</div>';
-  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:canPlay&&(f===null||suit(c)===f)});}).join("")+'</div>';
-  h+='<div class="msg" style="margin-top:10px">Seus pontos: <b>'+S["s"+me]+'</b>'+(f!==null?' · siga o naipe '+SU[f]:"")+'</div>';
+  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:canPlay});}).join("")+'</div>';
+  h+='<div class="msg" style="margin-top:10px">Seus pontos: <b>'+S["s"+me]+'</b>'+'</div>';
   if(over) h+='<div class="actions"><button id="rm">Jogar de novo</button></div>';
   app.innerHTML=h; err="";
   document.getElementById("lv").onclick=function(){if(confirm("Sair da sala?"))leave();};
