@@ -68,28 +68,35 @@ function sortHand(h){return h.slice().sort(function(a,b){return suit(a)-suit(b)|
 function dealInto(g,first){
   var d=shuffle(Array.from({length:40},function(_,i){return i;}));
   g.h0=d.slice(0,3);g.h1=d.slice(3,6);g.stock=d.slice(6);g.trump=suit(g.stock[0]);
-  g.t0=-1;g.t1=-1;g.s0=0;g.s1=0;g.seq=0;g.last=null;g.turn=first;g.winner=null;g.status="playing";return g;
+  g.t0=-1;g.t1=-1;g.s0=0;g.s1=0;g.w0=g.w0||0;g.w1=g.w1||0;g.seq=0;g.last=null;g.turn=first;g.winner=null;g.status="playing";return g;
 }
 function genCode(){var a="ABCDEFGHJKLMNPQRSTUVWXYZ",s="";for(var i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
 function saveName(){try{localStorage.setItem("bisca_name",myName);}catch(e){}}
 function loadName(){try{return localStorage.getItem("bisca_name")||"";}catch(e){return "";}}
 
 /* ---------- lógica (roda só no anfitrião) ---------- */
+/* Rela: 7 e Ás do trunfo */
+function t7(St){return St.trump*10+8;} function tA(St){return St.trump*10+9;}
+/* o 7 de trunfo não pode ser jogado "por cima" da carta do outro, exceto na última rodada (mão com 1 carta) */
+function blocked7(St,who,c){ return St["t"+(1-who)]>=0 && c===t7(St) && St["h"+who].length>1; }
 function applyPlay(who,c){
   if(!G||G.status!=="playing"||G.turn!==who||G["t"+who]>=0) return;
   if(G["h"+who].indexOf(c)<0) return;
+  if(blocked7(G,who,c)) return;
   var hand=G["h"+who].filter(function(x){return x!==c;}), lead=1-who;
   G["h"+who]=hand;
   if(G["t"+lead]<0){ G["t"+who]=c; G.turn=lead; G.log=G["p"+who].name+" jogou "+name(c)+"."; return; }
   var lc=G["t"+lead], w;
   if(suit(c)===suit(lc)) w=idx(c)>idx(lc)?who:lead; else if(suit(c)===G.trump) w=who; else w=lead;
   var gain=pts(c)+pts(lc), ca={}; ca[who]=c; ca[lead]=lc;
-  G.seq=(G.seq||0)+1; G.last={c0:ca[0],c1:ca[1],w:w,gain:gain};
+  G.seq=(G.seq||0)+1; var rela=(lc===t7(G)&&c===tA(G));
+  G.last={c0:ca[0],c1:ca[1],w:w,gain:gain,rela:rela};
+  if(rela) G["w"+who]=(G["w"+who]||0)+1;
   G["s"+w]+=gain;
   if(G.stock.length){ G["h"+w].push(G.stock.pop()); G["h"+(1-w)].push(G.stock.pop()); }
   G.t0=-1;G.t1=-1;G.turn=w;
-  G.log=G["p"+w].name+" levou a vaza ("+name(lc)+" × "+name(c)+") e ganhou "+gain+" pontos.";
-  if(!G.h0.length&&!G.h1.length){ G.status="over"; G.winner=G.s0>60?0:(G.s1>60?1:-1); }
+  G.log=G["p"+w].name+" levou a vaza ("+name(lc)+" × "+name(c)+") e ganhou "+gain+" pontos."+(rela?" RELA! "+G["p"+who].name+" ganha uma vitória extra.":"");
+  if(!G.h0.length&&!G.h1.length){ G.status="over"; G.winner=G.s0>60?0:(G.s1>60?1:-1); if(G.winner>=0) G["w"+G.winner]=(G["w"+G.winner]||0)+1; }
 }
 function applyRematch(){ if(!G||G.status!=="over")return; dealInto(G,G.winner===0?1:0); G.log="Nova partida!"; }
 function viewFor(who){
@@ -244,6 +251,7 @@ function act(msg){
 }
 function playCard(c){
   if(!S||S.status!=="playing"||S.turn!==me||S["t"+me]>=0||Date.now()<holdUntil)return;
+  if(blocked7(S,me,c)){err="Você não pode jogar o 7 de trunfo por cima da carta do adversário (só na última rodada).";return render();}
   act({t:"play",c:c});
 }
 
@@ -276,7 +284,7 @@ function render(){
     (err?'<p style="color:#c62828">'+esc(err)+'</p>':'')+'</div>'+
     '<details><summary>Como jogar</summary><div class="panel">Baralho de 40 cartas (sem 8, 9 e 10). Cada um recebe 3 cartas e uma carta vira o <b>trunfo</b>. '+
     'Vence a vaza a carta mais forte do naipe jogado, ou qualquer trunfo. Ordem: A, 7, K, J, Q, 6, 5, 4, 3, 2. Pontos: A=11, 7=10, K=4, J=3, Q=2, demais 0. '+
-    'Quem ganha a vaza compra primeiro. Mais de 60 pontos vence; 60 é empate.</div></details>';
+    'Quem ganha a vaza compra primeiro. Mais de 60 pontos vence; 60 é empate. Cada partida vencida vale 1 vitória.<br><br><b>Rela:</b> se alguém jogar o 7 de trunfo e o adversário responder com o Ás de trunfo, o dono do Ás ganha <b>1 vitória extra na hora</b> (e leva 21 pontos); a partida continua e ainda vale mais uma vitória. O 7 de trunfo <b>não pode</b> ser jogado por cima da carta do adversário, exceto na última rodada. Para fugir do rela, jogue o 7 de trunfo como primeira carta da rodada.</div></details>';
     var nm=document.getElementById("nm");
     document.getElementById("mk").onclick=function(){var n=nm.value.trim();if(!n){err="Digite seu nome.";return render();}err="";createRoom(n);};
     document.getElementById("jn").onclick=function(){var n=nm.value.trim(),c=document.getElementById("cd").value.trim();if(!n||c.length<4){err="Informe nome e código.";return render();}joinRoom(c,n);};
@@ -289,20 +297,20 @@ function render(){
   }
   var opp=1-me, over=S.status==="over", myTurn=S.turn===me&&!over, oppName=S["p"+opp].name;
   var holding=!!(S.last&&Date.now()<holdUntil), canPlay=myTurn&&!holding;
-  var h='<div class="bar"><h1 style="margin:0">🃏 Bisca</h1><span class="pill">Sala '+S.code+'</span><span class="pill">Trunfo '+SU[S.trump]+'</span><button class="sec" id="lv" style="color:#fff">Sair</button></div>';
+  var h='<div class="bar"><h1 style="margin:0">🃏 Bisca</h1><span class="pill">Sala '+S.code+'</span><span class="pill">Trunfo '+SU[S.trump]+'</span><span class="pill">Vitórias '+(S["w"+me]||0)+' × '+(S["w"+opp]||0)+'</span><button class="sec" id="lv" style="color:#fff">Sair</button></div>';
   if(closed) h+='<div class="turn">⚠️ Conexão perdida. Tentando reconectar…</div>';
   h+='<div class="opp"><div style="text-align:center;margin-bottom:4px">'+esc(oppName)+' · '+S["h"+opp].length+' cartas</div><div class="hand" style="min-height:52px">'+backs(S["h"+opp].length)+'</div></div>';
   if(over){
     h+='<div class="win">'+(S.winner===-1?"Empate em 60 a 60!":(S.winner===me?"🎉 Você venceu!":"😮 "+esc(oppName)+" venceu."))+'<div style="font-size:16px;font-weight:500;margin-top:4px">Você '+S["s"+me]+' × '+S["s"+opp]+' '+esc(oppName)+'</div></div>';
   }else{
-    if(holding) h+='<div class="turn">'+(S.last.w===me?"Você levou a vaza":esc(oppName)+" levou a vaza")+' · +'+S.last.gain+' pts</div>';
+    if(holding) h+='<div class="turn">'+(S.last.w===me?"Você levou a vaza":esc(oppName)+" levou a vaza")+' · +'+S.last.gain+' pts'+(S.last.rela?' · 🔥 RELA! +1 vitória para '+(S.last.w===me?"você":esc(oppName)):"")+'</div>';
     else h+='<div class="turn'+(myTurn?" me":"")+'">'+(myTurn?(S["t"+opp]>=0?"Sua vez: responda a carta":"Sua vez: jogue uma carta"):"Vez de "+esc(oppName)+"…")+'</div>';
   }
   var oppC=holding?S.last["c"+opp]:S["t"+opp], meC=holding?S.last["c"+me]:S["t"+me];
   h+='<div class="mid"><div class="pile">'+(S.stock.length?'<div style="display:flex;align-items:center"><div class="card back"></div><div style="margin-left:-34px;transform:rotate(90deg);margin-right:20px">'+cardHTML(S.stock[0])+'</div></div>':'<div class="card empty"></div>')+'<div>Monte ('+S.stock.length+')</div></div>'+
      '<div class="pile"><div class="hand" style="min-height:80px;min-width:150px;flex-wrap:nowrap;gap:12px">'+tableCell(oppC,oppName,holding&&S.last.w===opp)+tableCell(meC,"Você",holding&&S.last.w===me)+'</div><div>Mesa</div></div></div>';
   h+='<div class="msg">'+esc(err||(holding?"":S.log)||"")+'</div>';
-  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:canPlay});}).join("")+'</div>';
+  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:canPlay&&!blocked7(S,me,c)});}).join("")+'</div>';
   h+='<div class="msg" style="margin-top:10px">Seus pontos: <b>'+S["s"+me]+'</b>'+'</div>';
   if(over) h+='<div class="actions"><button id="rm">Jogar de novo</button></div>';
   app.innerHTML=h; err="";
