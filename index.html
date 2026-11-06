@@ -67,8 +67,18 @@ function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(M
 function sortHand(h){return h.slice().sort(function(a,b){return suit(a)-suit(b)||idx(a)-idx(b);});}
 function dealInto(g,first){
   var d=shuffle(Array.from({length:40},function(_,i){return i;}));
-  g.h0=d.slice(0,3);g.h1=d.slice(3,6);g.stock=d.slice(6);g.trump=suit(g.stock[0]);
-  g.t0=-1;g.t1=-1;g.s0=0;g.s1=0;g.w0=g.w0||0;g.w1=g.w1||0;g.seq=0;g.last=null;g.turn=first;g.winner=null;g.status="playing";return g;
+  g.h0=d.slice(0,3);g.h1=d.slice(3,6);g.stock=d.slice(6);
+  // A carta que define o naipe do trunfo não pode ser 7 nem Ás.
+  // Se a primeira carta do monte for uma dessas, troca pela primeira carta válida.
+  if(idx(g.stock[0])===8||idx(g.stock[0])===9){
+    for(var i=1;i<g.stock.length;i++){
+      if(idx(g.stock[i])!==8&&idx(g.stock[i])!==9){
+        var temp=g.stock[0];g.stock[0]=g.stock[i];g.stock[i]=temp;break;
+      }
+    }
+  }
+  g.trump=suit(g.stock[0]);
+  g.t0=-1;g.t1=-1;g.s0=0;g.s1=0;g.w0=g.w0||0;g.w1=g.w1||0;g.seq=0;g.last=null;g.t7Played=false;g.turn=first;g.winner=null;g.status="playing";return g;
 }
 function genCode(){var a="ABCDEFGHJKLMNPQRSTUVWXYZ",s="";for(var i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
 function saveName(){try{localStorage.setItem("bisca_name",myName);}catch(e){}}
@@ -79,12 +89,16 @@ function loadName(){try{return localStorage.getItem("bisca_name")||"";}catch(e){
 function t7(St){return St.trump*10+8;} function tA(St){return St.trump*10+9;}
 /* o 7 de trunfo não pode ser jogado "por cima" da carta do outro, exceto na última rodada (mão com 1 carta) */
 function blocked7(St,who,c){ return St["t"+(1-who)]>=0 && c===t7(St) && St["h"+who].length>1; }
+/* O Ás de trunfo só pode ser jogado depois que o 7 de trunfo já saiu.
+   Exceção: na última rodada, quando o jogador tem apenas uma carta na mão. */
+function blockedAceTrump(St,who,c){ return c===tA(St) && !St.t7Played && St["h"+who].length>1; }
 function applyPlay(who,c){
   if(!G||G.status!=="playing"||G.turn!==who||G["t"+who]>=0) return;
   if(G["h"+who].indexOf(c)<0) return;
-  if(blocked7(G,who,c)) return;
+  if(blocked7(G,who,c)||blockedAceTrump(G,who,c)) return;
   var hand=G["h"+who].filter(function(x){return x!==c;}), lead=1-who;
   G["h"+who]=hand;
+  if(c===t7(G)) G.t7Played=true;
   if(G["t"+lead]<0){ G["t"+who]=c; G.turn=lead; G.log=G["p"+who].name+" jogou "+name(c)+"."; return; }
   var lc=G["t"+lead], w;
   if(suit(c)===suit(lc)) w=idx(c)>idx(lc)?who:lead; else if(suit(c)===G.trump) w=who; else w=lead;
@@ -252,6 +266,7 @@ function act(msg){
 function playCard(c){
   if(!S||S.status!=="playing"||S.turn!==me||S["t"+me]>=0||Date.now()<holdUntil)return;
   if(blocked7(S,me,c)){err="Você não pode jogar o 7 de trunfo por cima da carta do adversário (só na última rodada).";return render();}
+  if(blockedAceTrump(S,me,c)){err="O Ás de trunfo só pode ser jogado depois que o 7 de trunfo sair (exceto na última rodada).";return render();}
   act({t:"play",c:c});
 }
 
@@ -284,7 +299,7 @@ function render(){
     (err?'<p style="color:#c62828">'+esc(err)+'</p>':'')+'</div>'+
     '<details><summary>Como jogar</summary><div class="panel">Baralho de 40 cartas (sem 8, 9 e 10). Cada um recebe 3 cartas e uma carta vira o <b>trunfo</b>. '+
     'Vence a vaza a carta mais forte do naipe jogado, ou qualquer trunfo. Ordem: A, 7, K, J, Q, 6, 5, 4, 3, 2. Pontos: A=11, 7=10, K=4, J=3, Q=2, demais 0. '+
-    'Quem ganha a vaza compra primeiro. Mais de 60 pontos vence; 60 é empate. Cada partida vencida vale 1 vitória.<br><br><b>Rela:</b> se alguém jogar o 7 de trunfo e o adversário responder com o Ás de trunfo, o dono do Ás ganha <b>1 vitória extra na hora</b> (e leva 21 pontos); a partida continua e ainda vale mais uma vitória. O 7 de trunfo <b>não pode</b> ser jogado por cima da carta do adversário, exceto na última rodada. Para fugir do rela, jogue o 7 de trunfo como primeira carta da rodada.</div></details>';
+    'Quem ganha a vaza compra primeiro. Mais de 60 pontos vence; 60 é empate. Cada partida vencida vale 1 vitória.<br><br><b>Rela:</b> se alguém jogar o 7 de trunfo e o adversário responder com o Ás de trunfo, o dono do Ás ganha <b>1 vitória extra na hora</b> (e leva 21 pontos); a partida continua e ainda vale mais uma vitória. O 7 de trunfo <b>não pode</b> ser jogado por cima da carta do adversário, exceto na última rodada. O <b>Ás de trunfo não pode ser jogado antes do 7 de trunfo</b>, exceto na última rodada. O segundo jogador pode responder com carta de qualquer naipe; não é obrigatório acompanhar o naipe da primeira carta. Para fugir do rela, jogue o 7 de trunfo como primeira carta da rodada.</div></details>';
     var nm=document.getElementById("nm");
     document.getElementById("mk").onclick=function(){var n=nm.value.trim();if(!n){err="Digite seu nome.";return render();}err="";createRoom(n);};
     document.getElementById("jn").onclick=function(){var n=nm.value.trim(),c=document.getElementById("cd").value.trim();if(!n||c.length<4){err="Informe nome e código.";return render();}joinRoom(c,n);};
@@ -310,7 +325,7 @@ function render(){
   h+='<div class="mid"><div class="pile">'+(S.stock.length?'<div style="display:flex;align-items:center"><div class="card back"></div><div style="margin-left:-34px;transform:rotate(90deg);margin-right:20px">'+cardHTML(S.stock[0])+'</div></div>':'<div class="card empty"></div>')+'<div>Monte ('+S.stock.length+')</div></div>'+
      '<div class="pile"><div class="hand" style="min-height:80px;min-width:150px;flex-wrap:nowrap;gap:12px">'+tableCell(oppC,oppName,holding&&S.last.w===opp)+tableCell(meC,"Você",holding&&S.last.w===me)+'</div><div>Mesa</div></div></div>';
   h+='<div class="msg">'+esc(err||(holding?"":S.log)||"")+'</div>';
-  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:canPlay&&!blocked7(S,me,c)});}).join("")+'</div>';
+  h+='<div class="hand">'+sortHand(S["h"+me]).map(function(c){return cardHTML(c,{can:canPlay&&!blocked7(S,me,c)&&!blockedAceTrump(S,me,c)});}).join("")+'</div>';
   h+='<div class="msg" style="margin-top:10px">Seus pontos: <b>'+S["s"+me]+'</b>'+'</div>';
   if(over) h+='<div class="actions"><button id="rm">Jogar de novo</button></div>';
   app.innerHTML=h; err="";
