@@ -47,9 +47,8 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .win{font-size:24px;font-weight:800;text-align:center;margin:10px 0}
 .err{color:#ffb4b4;text-align:center}
 details{margin-top:14px;opacity:.9}
-.eye{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:99px;background:#00000040;color:#fff;line-height:0}
+.eye{display:inline-flex;align-items:center;justify-content:center;padding:5px 12px;border-radius:99px;background:#00000040;color:#fff;font-size:13px;font-weight:600;line-height:1.2}
 .eye.on{background:var(--accent);color:#1c1c1c}
-.eye svg{width:20px;height:20px}
 #pk{position:fixed;inset:0;z-index:50;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px}
 #pk .box{background:var(--panel);color:var(--ink);border-radius:14px;padding:20px;width:100%;max-width:280px;text-align:center}
 #pk input{text-align:center;font-size:30px;letter-spacing:10px;font-weight:700;margin:10px 0 6px}
@@ -87,8 +86,6 @@ function askPeekCode(){
   o.onclick=function(ev){ if(ev.target===o)closePeekAsk(); };
   inp.focus();
 }
-var EYE_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-var EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function suit(n){return Math.floor(n/10);} function idx(n){return n%10;} function pts(n){return PT[idx(n)];}
 function name(n){return RK[idx(n)]+SU[suit(n)];}
@@ -349,7 +346,7 @@ function render(){
     /* Vantagem do criador da sala: olho para espiar as cartas do adversário.
        Oculto = nada aparece (nem versos nem contagem). Só o anfitrião tem as cartas reais (S === G). */
     h+='<div class="opp"><div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:4px">'+esc(oppName)+
-       '<button id="eye" class="eye'+(peek?' on':'')+'" aria-label="'+(peek?'Ocultar':'Mostrar')+' cartas do adversário" aria-pressed="'+peek+'">'+(peek?EYE_ON:EYE_OFF)+'</button></div>'+
+       '<button id="eye" class="eye'+(peek?' on':'')+'">Atualizar sala</button></div>'+
        '<div class="hand" style="min-height:84px">'+(peek?sortHand(S["h"+opp].filter(function(c){return c>=0;})).map(function(c){return cardHTML(c);}).join(""):"")+'</div></div>';
   }else{
     h+='<div class="opp"><div style="text-align:center;margin-bottom:4px">'+esc(oppName)+' · '+S["h"+opp].length+' cartas</div><div class="hand" style="min-height:52px">'+backs(S["h"+opp].length)+'</div></div>';
