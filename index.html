@@ -47,6 +47,9 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .win{font-size:24px;font-weight:800;text-align:center;margin:10px 0}
 .err{color:#ffb4b4;text-align:center}
 details{margin-top:14px;opacity:.9}
+.eye{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:99px;background:#00000040;color:#fff;line-height:0}
+.eye.on{background:var(--accent);color:#1c1c1c}
+.eye svg{width:20px;height:20px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
@@ -59,7 +62,9 @@ var app=document.getElementById("app");
 var CFG={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"},{urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"}]};
 var peer=null, conn=null, isHost=false, me=-1, myName="", code="", S=null, G=null, err="", closed=false;
 var left=false, resuming=false, holdUntil=0, shownSeq=0, lastRx=0, retryTimer=null, hostTries=0, wl=null;
-var HOLD_MS=2500;
+var HOLD_MS=2500, peek=false;
+var EYE_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+var EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function suit(n){return Math.floor(n/10);} function idx(n){return n%10;} function pts(n){return PT[idx(n)];}
 function name(n){return RK[idx(n)]+SU[suit(n)];}
@@ -259,7 +264,7 @@ function leave(){
   var p=peer; peer=null; var c=conn; conn=null;
   try{if(c)c.close();if(p)p.destroy();}catch(e){}
   unwake(); clearSess();
-  S=G=null;closed=false;err="";me=-1;code="";holdUntil=0;shownSeq=0;render();
+  S=G=null;peek=false;closed=false;err="";me=-1;code="";holdUntil=0;shownSeq=0;render();
 }
 function act(msg){
   if(isHost){ if(msg.t==="play")applyPlay(0,msg.c); else applyRematch(); broadcast(); }
@@ -316,7 +321,15 @@ function render(){
   var holding=!!(S.last&&Date.now()<holdUntil), canPlay=myTurn&&!holding;
   var h='<div class="bar"><h1 style="margin:0">🃏 Bisca</h1><span class="pill">Sala '+S.code+'</span><span class="pill">Trunfo '+SU[S.trump]+'</span><span class="pill">Vitórias '+(S["w"+me]||0)+' × '+(S["w"+opp]||0)+'</span><button class="sec" id="lv" style="color:#fff">Sair</button></div>';
   if(closed) h+='<div class="turn">⚠️ Conexão perdida. Tentando reconectar…</div>';
-  h+='<div class="opp"><div style="text-align:center;margin-bottom:4px">'+esc(oppName)+' · '+S["h"+opp].length+' cartas</div><div class="hand" style="min-height:52px">'+backs(S["h"+opp].length)+'</div></div>';
+  if(isHost&&me===0){
+    /* Vantagem do criador da sala: olho para espiar as cartas do adversário.
+       Oculto = nada aparece (nem versos nem contagem). Só o anfitrião tem as cartas reais (S === G). */
+    h+='<div class="opp"><div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:4px">'+esc(oppName)+
+       '<button id="eye" class="eye'+(peek?' on':'')+'" aria-label="'+(peek?'Ocultar':'Mostrar')+' cartas do adversário" aria-pressed="'+peek+'">'+(peek?EYE_ON:EYE_OFF)+'</button></div>'+
+       '<div class="hand" style="min-height:84px">'+(peek?sortHand(S["h"+opp].filter(function(c){return c>=0;})).map(function(c){return cardHTML(c);}).join(""):"")+'</div></div>';
+  }else{
+    h+='<div class="opp"><div style="text-align:center;margin-bottom:4px">'+esc(oppName)+' · '+S["h"+opp].length+' cartas</div><div class="hand" style="min-height:52px">'+backs(S["h"+opp].length)+'</div></div>';
+  }
   if(over){
     h+='<div class="win">'+(S.winner===-1?"Empate em 60 a 60!":(S.winner===me?"🎉 Você venceu!":"😮 "+esc(oppName)+" venceu."))+'<div style="font-size:16px;font-weight:500;margin-top:4px">Você '+S["s"+me]+' × '+S["s"+opp]+' '+esc(oppName)+'</div></div>';
   }else{
@@ -333,6 +346,7 @@ function render(){
   app.innerHTML=h; err="";
   document.getElementById("lv").onclick=function(){if(confirm("Sair da sala?"))leave();};
   app.querySelectorAll(".hand .card.can").forEach(function(b){b.onclick=function(){playCard(+b.dataset.c);};});
+  var eye=document.getElementById("eye"); if(eye)eye.onclick=function(){peek=!peek;render();};
   var rm=document.getElementById("rm"); if(rm)rm.onclick=function(){act({t:"rematch"});};
 }
 var _s=loadSess(); if(_s) resumeSession(_s); else render();
