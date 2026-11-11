@@ -50,6 +50,10 @@ details{margin-top:14px;opacity:.9}
 .eye{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:99px;background:#00000040;color:#fff;line-height:0}
 .eye.on{background:var(--accent);color:#1c1c1c}
 .eye svg{width:20px;height:20px}
+#pk{position:fixed;inset:0;z-index:50;background:#000b;display:flex;align-items:center;justify-content:center;padding:16px}
+#pk .box{background:var(--panel);color:var(--ink);border-radius:14px;padding:20px;width:100%;max-width:280px;text-align:center}
+#pk input{text-align:center;font-size:30px;letter-spacing:10px;font-weight:700;margin:10px 0 6px}
+#pk .e{color:#c62828;min-height:20px;font-size:14px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
@@ -62,7 +66,27 @@ var app=document.getElementById("app");
 var CFG={iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"},{urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"},{urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"}]};
 var peer=null, conn=null, isHost=false, me=-1, myName="", code="", S=null, G=null, err="", closed=false;
 var left=false, resuming=false, holdUntil=0, shownSeq=0, lastRx=0, retryTimer=null, hostTries=0, wl=null;
-var HOLD_MS=2500, peek=false;
+var HOLD_MS=2500, peek=false, PEEK_CODE="05";
+function closePeekAsk(){ var o=document.getElementById("pk"); if(o)o.remove(); }
+function askPeekCode(){
+  closePeekAsk();
+  var o=document.createElement("div"); o.id="pk";
+  o.innerHTML='<div class="box"><div style="font-weight:700">Digite o código</div>'+
+    '<input id="pkc" type="password" inputmode="numeric" autocomplete="off" maxlength="2" aria-label="Código de 2 dígitos">'+
+    '<div class="e" id="pke"></div><div class="row" style="justify-content:center"><button id="pko">OK</button><button id="pkx" class="sec">Cancelar</button></div></div>';
+  document.body.appendChild(o);
+  var inp=document.getElementById("pkc"), e=document.getElementById("pke");
+  function submit(){
+    if(inp.value===PEEK_CODE){ closePeekAsk(); peek=true; render(); }
+    else{ e.textContent="Código incorreto."; inp.value=""; inp.focus(); }
+  }
+  inp.oninput=function(){ inp.value=inp.value.replace(/\D/g,"").slice(0,2); e.textContent=""; if(inp.value.length===2)submit(); };
+  inp.onkeydown=function(ev){ if(ev.key==="Enter")submit(); else if(ev.key==="Escape")closePeekAsk(); };
+  document.getElementById("pko").onclick=submit;
+  document.getElementById("pkx").onclick=closePeekAsk;
+  o.onclick=function(ev){ if(ev.target===o)closePeekAsk(); };
+  inp.focus();
+}
 var EYE_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 var EYE_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
@@ -264,7 +288,7 @@ function leave(){
   var p=peer; peer=null; var c=conn; conn=null;
   try{if(c)c.close();if(p)p.destroy();}catch(e){}
   unwake(); clearSess();
-  S=G=null;peek=false;closed=false;err="";me=-1;code="";holdUntil=0;shownSeq=0;render();
+  S=G=null;peek=false;closePeekAsk();closed=false;err="";me=-1;code="";holdUntil=0;shownSeq=0;render();
 }
 function act(msg){
   if(isHost){ if(msg.t==="play")applyPlay(0,msg.c); else applyRematch(); broadcast(); }
@@ -346,7 +370,7 @@ function render(){
   app.innerHTML=h; err="";
   document.getElementById("lv").onclick=function(){if(confirm("Sair da sala?"))leave();};
   app.querySelectorAll(".hand .card.can").forEach(function(b){b.onclick=function(){playCard(+b.dataset.c);};});
-  var eye=document.getElementById("eye"); if(eye)eye.onclick=function(){peek=!peek;render();};
+  var eye=document.getElementById("eye"); if(eye)eye.onclick=function(){ if(peek){peek=false;render();} else askPeekCode(); };
   var rm=document.getElementById("rm"); if(rm)rm.onclick=function(){act({t:"rematch"});};
 }
 var _s=loadSess(); if(_s) resumeSession(_s); else render();
