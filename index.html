@@ -88,10 +88,12 @@ function loadName(){try{return localStorage.getItem("bisca_name")||"";}catch(e){
 /* Rela: 7 e Ás do trunfo */
 function t7(St){return St.trump*10+8;} function tA(St){return St.trump*10+9;}
 /* o 7 de trunfo não pode ser jogado "por cima" da carta do outro, exceto na última rodada (mão com 1 carta) */
-function blocked7(St,who,c){ return St["t"+(1-who)]>=0 && c===t7(St) && St["h"+who].length>1; }
+/* Se o jogador tem o 7 E o Ás de trunfo na mão, nenhuma das duas cartas é bloqueada. */
+function hasBoth(St,who){ var h=St["h"+who]; return h.indexOf(t7(St))>=0 && h.indexOf(tA(St))>=0; }
+function blocked7(St,who,c){ return St["t"+(1-who)]>=0 && c===t7(St) && St["h"+who].length>1 && !hasBoth(St,who); }
 /* O Ás de trunfo só pode ser jogado depois que o 7 de trunfo já saiu.
    Exceção: na última rodada, quando o jogador tem apenas uma carta na mão. */
-function blockedAceTrump(St,who,c){ return c===tA(St) && !St.t7Played && St["h"+who].length>1; }
+function blockedAceTrump(St,who,c){ return c===tA(St) && !St.t7Played && St["h"+who].length>1 && !hasBoth(St,who); }
 function applyPlay(who,c){
   if(!G||G.status!=="playing"||G.turn!==who||G["t"+who]>=0) return;
   if(G["h"+who].indexOf(c)<0) return;
@@ -299,7 +301,7 @@ function render(){
     (err?'<p style="color:#c62828">'+esc(err)+'</p>':'')+'</div>'+
     '<details><summary>Como jogar</summary><div class="panel">Baralho de 40 cartas (sem 8, 9 e 10). Cada um recebe 3 cartas e uma carta vira o <b>trunfo</b>. '+
     'Vence a vaza a carta mais forte do naipe jogado, ou qualquer trunfo. Ordem: A, 7, K, J, Q, 6, 5, 4, 3, 2. Pontos: A=11, 7=10, K=4, J=3, Q=2, demais 0. '+
-    'Quem ganha a vaza compra primeiro. Mais de 60 pontos vence; 60 é empate. Cada partida vencida vale 1 vitória.<br><br><b>Rela:</b> se alguém jogar o 7 de trunfo e o adversário responder com o Ás de trunfo, o dono do Ás ganha <b>1 vitória extra na hora</b> (e leva 21 pontos); a partida continua e ainda vale mais uma vitória. O 7 de trunfo <b>não pode</b> ser jogado por cima da carta do adversário, exceto na última rodada. O <b>Ás de trunfo não pode ser jogado antes do 7 de trunfo</b>, exceto na última rodada. O segundo jogador pode responder com carta de qualquer naipe; não é obrigatório acompanhar o naipe da primeira carta. Para fugir do rela, jogue o 7 de trunfo como primeira carta da rodada.</div></details>';
+    'Quem ganha a vaza compra primeiro. Mais de 60 pontos vence; 60 é empate. Cada partida vencida vale 1 vitória.<br><br><b>Rela:</b> se alguém jogar o 7 de trunfo e o adversário responder com o Ás de trunfo, o dono do Ás ganha <b>1 vitória extra na hora</b> (e leva 21 pontos); a partida continua e ainda vale mais uma vitória. O 7 de trunfo <b>não pode</b> ser jogado por cima da carta do adversário, exceto na última rodada. O <b>Ás de trunfo não pode ser jogado antes do 7 de trunfo</b>, exceto na última rodada. Se o jogador tiver o 7 <b>e</b> o Ás de trunfo na mão, pode jogar qualquer um dos dois a qualquer momento. O segundo jogador pode responder com carta de qualquer naipe; não é obrigatório acompanhar o naipe da primeira carta. Para fugir do rela, jogue o 7 de trunfo como primeira carta da rodada.</div></details>';
     var nm=document.getElementById("nm");
     document.getElementById("mk").onclick=function(){var n=nm.value.trim();if(!n){err="Digite seu nome.";return render();}err="";createRoom(n);};
     document.getElementById("jn").onclick=function(){var n=nm.value.trim(),c=document.getElementById("cd").value.trim();if(!n||c.length<4){err="Informe nome e código.";return render();}joinRoom(c,n);};
