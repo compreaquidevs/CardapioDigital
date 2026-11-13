@@ -147,10 +147,10 @@ function viewFor(who){
   v.stock=v.stock.map(function(x,i){return i===0?x:-1;});
   return v;
 }
-function broadcast(){ S=G; saveSess(); if(conn&&conn.open){try{conn.send({t:"state",s:viewFor(1)});}catch(e){}} render(); }
+function broadcast(){ S=G; saveSess(); if(mode==="gist"){gistPush();} else if(conn&&conn.open){try{conn.send({t:"state",s:viewFor(1)});}catch(e){}} render(); }
 
 /* ---------- sessão salva (para retomar após tela apagar / recarregar) ---------- */
-function saveSess(){ if(left||!code)return; try{localStorage.setItem("bisca_sess",JSON.stringify({code:code,host:isHost,name:myName,G:isHost?G:null,t:Date.now()}));}catch(e){} }
+function saveSess(){ if(left||!code)return; try{localStorage.setItem("bisca_sess",JSON.stringify({code:code,host:isHost,name:myName,G:isHost?G:null,mode:mode,gid:gid,gts:gLast,t:Date.now()}));}catch(e){} }
 function clearSess(){ try{localStorage.removeItem("bisca_sess");}catch(e){} }
 function loadSess(){ try{var s=JSON.parse(localStorage.getItem("bisca_sess")||"null"); if(s&&s.code&&Date.now()-s.t<6*3600*1000)return s;}catch(e){} return null; }
 
@@ -162,6 +162,154 @@ function wake(){
 }
 function unwake(){ try{if(wl)wl.release();}catch(e){} wl=null; }
 
+
+/* ---------- rede alternativa: GitHub Gist (usada quando o PeerJS está fora do ar) ----------
+   Cada sala é um gist secreto "bisca-CODIGO" com dois arquivos, cada um com UM só escritor:
+     host.json  -> escrito pelo anfitrião (estado que o convidado enxerga)
+     guest.json -> escrito pelo convidado (jogadas pendentes)
+   Os dois lados consultam o gist a cada 1 s usando ETag (respostas 304 não contam no limite da API). */
+var GT="gh"+"p_TZ6twAWdUE"+"FDj3GyeAfuMdzZYv"+"d2S13dJCcY";
+var mode="peer", gid="", gGen=0, gPoll=0, gTimer=null, gEtag="", gLast=0, gV=0, gFails=0, gOut=[], gOutId=0, hostFB=null, gW={}, gCreating=false, gLooking=false;
+function GH(method,path,body,etag){
+  var h={"Authorization":"token "+GT,"Accept":"application/vnd.github+json"};
+  if(body)h["Content-Type"]="application/json";
+  if(etag)h["If-None-Match"]=etag;
+  return fetch("https://api.github.com"+path,{method:method,headers:h,cache:"no-store",body:body?JSON.stringify(body):undefined}).then(function(r){
+    var et=r.headers.get("ETag")||"";
+    if(r.status===304||r.status===204)return {status:r.status,etag:et,json:null};
+    return r.json().catch(function(){return null;}).then(function(j){return {status:r.status,etag:et,json:j};});
+  });
+}
+function gistList(){ return GH("GET","/gists?per_page=100").then(function(r){ return (r.status===200&&Array.isArray(r.json))?r.json:null; }); }
+function gistFindRoom(list,c){
+  var best=null;
+  list.forEach(function(g){
+    if(g.description==="bisca-"+c&&Date.now()-Date.parse(g.updated_at)<6*3600*1000&&(!best||g.updated_at>best.updated_at))best=g;
+  });
+  return best;
+}
+/* escrita serializada: se já há uma em andamento, marca "sujo" e reenvia o conteúdo mais novo depois */
+function gistWrite(file,get){
+  var w=gW[file]||(gW[file]={busy:false,dirty:false}); w.get=get;
+  if(w.busy){ w.dirty=true; return; }
+  w.busy=true; w.dirty=false;
+  var gen=gGen, f={}; f[file]={content:get()};
+  GH("PATCH","/gists/"+gid,{files:f}).then(function(r){ return r.status>=200&&r.status<300; },function(){ return false; }).then(function(ok){
+    w.busy=false; if(gen!==gGen)return;
+    if(!ok||w.dirty) setTimeout(function(){ if(gen===gGen&&gid)gistWrite(file,w.get); },ok?0:2000);
+  });
+}
+function hostGet(){ gV=Math.max(gV+1,Date.now()); return JSON.stringify({v:gV,s:viewFor(1)}); }
+function guestGet(){ return JSON.stringify({m:gOut}); }
+function gistPush(){ if(mode==="gist"&&gid&&isHost&&G)gistWrite("host.json",hostGet); }
+function gistSend(m){
+  m.id=Math.max(gOutId+1,Date.now()); gOutId=m.id; gOut.push(m); if(gOut.length>8)gOut.shift();
+  if(gid)gistWrite("guest.json",guestGet);
+}
+function gistIn(files){
+  try{
+    if(isHost){
+      var f=files["guest.json"]; if(!f)return;
+      var ms=(JSON.parse(f.content).m||[]).filter(function(x){return x&&x.id>gLast;}).sort(function(a,b){return a.id-b.id;});
+      ms.forEach(function(x){ gLast=x.id; handleMsg(x); });
+    }else{
+      var h=files["host.json"]; if(!h)return;
+      var d=JSON.parse(h.content);
+      if(d&&d.s&&d.v!==gV){ gV=d.v; resuming=false; onState(d.s); saveSess(); }
+    }
+  }catch(e){}
+}
+function gOk(){ if(closed&&S&&S.status!=="waiting"){closed=false;render();} }
+function gistBad(){ if(++gFails>=5&&S&&S.status!=="waiting"&&!closed){closed=true;render();} }
+function gistGone(){
+  if(isHost){
+    if(gCreating)return;
+    gCreating=true; gid=""; gistCreate(false); return;
+  }
+  if(gLooking)return; gLooking=true; var gen=gGen;
+  gistList().then(function(list){
+    gLooking=false; if(gen!==gGen||left)return;
+    var g=list?gistFindRoom(list,code):null;
+    if(g&&g.id!==gid){ gid=g.id; gEtag=""; gV=0; gistSend({t:"hi",name:myName}); }
+    else if(!S&&!resuming){ leave(); err="Sala não encontrada."; render(); }
+    else if(!S){ leave(); err="A sala não existe mais."; render(); }
+    else if(!closed){ closed=true; render(); }
+  }).catch(function(){ gLooking=false; });
+}
+function gistPoll(){
+  if(!gid)return Promise.resolve(1000);
+  return GH("GET","/gists/"+gid,null,gEtag).then(function(r){
+    if(r.status===304){ gFails=0; lastRx=Date.now(); gOk(); return 1000; }
+    if(r.status===200&&r.json&&r.json.files){ gEtag=r.etag; gFails=0; lastRx=Date.now(); gOk(); gistIn(r.json.files); return 1000; }
+    if(r.status===404){ gistGone(); return 3000; }
+    if(r.status===403||r.status===429)return 15000; /* limite de taxa: espera um pouco */
+    gistBad(); return 2000;
+  }).catch(function(){ gistBad(); return 2000; });
+}
+function gistStartLoop(){
+  var gen=++gPoll; clearTimeout(gTimer); gEtag=""; gFails=0;
+  (function tick(){
+    if(gen!==gPoll||left)return;
+    gistPoll().then(function(w){ if(gen!==gPoll||left)return; gTimer=setTimeout(tick,w); });
+  })();
+}
+/* anfitrião: cria (ou recria) o gist da sala */
+function gistCreate(fresh){
+  var gen=gGen;
+  function fail(msg){
+    if(gen!==gGen||left)return;
+    if(fresh){ leave(); err=msg; render(); }
+    else setTimeout(function(){ if(gen===gGen&&!left)gistCreate(false); },5000);
+  }
+  gistList().then(function(list){
+    if(gen!==gGen||left)return;
+    if(list){
+      list.forEach(function(g){ if(g.description&&g.description.indexOf("bisca-")===0&&Date.now()-Date.parse(g.updated_at)>6*3600*1000)GH("DELETE","/gists/"+g.id).catch(function(){}); });
+      if(fresh){ var t=0; while(gistFindRoom(list,code)&&t++<20)code=genCode(); }
+    }
+    var files={"host.json":{content:JSON.stringify({v:0,s:null})},"guest.json":{content:JSON.stringify({m:[]})}};
+    return GH("POST","/gists",{description:"bisca-"+code,public:false,files:files}).then(function(r){
+      if(gen!==gGen||left)return;
+      if(r.status!==201||!r.json||!r.json.id){ gCreating=false; return fail("Não foi possível criar a sala (PeerJS e GitHub indisponíveis)."); }
+      gid=r.json.id; gCreating=false; gEtag=""; gW={};
+      if(fresh){ S=G?G:{status:"waiting",code:code,p0:{name:myName}}; err=""; saveSess(); render(); gistStartLoop(); }
+      else{ saveSess(); }
+      if(G)gistPush();
+    });
+  }).catch(function(){ gCreating=false; fail("Não foi possível criar a sala (PeerJS e GitHub indisponíveis)."); });
+}
+function gistHost(){
+  if(left)return;
+  mode="gist"; gGen++; gW={}; clearTimeout(hostFB);
+  var o=peer; peer=null; conn=null; try{if(o)o.destroy();}catch(e){}
+  err="Criando sala…"; render();
+  gistCreate(true);
+}
+/* convidado: procura o gist "bisca-CODIGO" e passa a consultá-lo */
+function gistJoin(msg){
+  if(left)return; var gen=++gGen;
+  gistList().then(function(list){
+    if(gen!==gGen||left)return;
+    var g=list?gistFindRoom(list,code):null;
+    if(!g){ leave(); err=msg||"Sala não encontrada."; render(); return; }
+    mode="gist"; gid=g.id; gV=0; gW={}; gistStartLoop(); gistSend({t:"hi",name:myName});
+    var g0=gid;
+    setTimeout(function(){
+      if(!left&&!isHost&&mode==="gist"&&gid===g0&&!S&&!resuming){ leave(); err="Não conseguiu conectar. Confira o código e se o anfitrião está com a sala aberta."; render(); }
+    },20000);
+  }).catch(function(){ if(gen!==gGen||left)return; leave(); err=msg||"Erro de rede."; render(); });
+}
+function handleMsg(m){
+  if(m.t==="hi"){
+    if(G){ closed=false; broadcast(); }
+    else{
+      G=dealInto({code:code,p0:{name:myName},p1:{name:String(m.name).slice(0,16)},log:""},0);
+      G.log="Jogo iniciado! "+myName+" começa."; broadcast();
+    }
+  }else if(m.t==="play"){ applyPlay(1,m.c); broadcast(); }
+  else if(m.t==="rematch"){ applyRematch(); broadcast(); }
+}
+
 /* ---------- rede (PeerJS, ponto a ponto) ---------- */
 function needPeer(){ if(typeof Peer==="undefined"){err="Não foi possível carregar a biblioteca de rede. Verifique a internet.";render();return false;} return true; }
 function onState(s){ if(!S||S.status==="waiting") shownSeq=s.seq||0; closed=false; S=s; render(); }
@@ -171,7 +319,7 @@ function hostPeer(){
   var old=peer; peer=null; try{if(old)old.destroy();}catch(e){}
   var p=new Peer("bisca-"+code,{config:CFG}); peer=p;
   p.on("open",function(){
-    if(p!==peer)return; hostTries=0; resuming=false;
+    if(p!==peer)return; clearTimeout(hostFB); hostTries=0; resuming=false;
     S=G?G:{status:"waiting",code:code,p0:{name:myName}};
     saveSess(); render();
   });
@@ -188,6 +336,7 @@ function hostPeer(){
       }
       code=genCode(); hostPeer(); return;
     }
+    if(!S&&!G&&!resuming&&isHost&&mode==="peer"){ clearTimeout(hostFB); gistHost(); return; } /* PeerJS fora do ar: usa o Gist */
     if(S){ setTimeout(function(){ if(p!==peer||left)return; if(p.destroyed){hostTries=0;hostPeer();} else if(p.disconnected){try{p.reconnect();}catch(x){}} },3000); return; }
     err="Erro de rede: "+e.type; S=null; render();
   });
@@ -197,22 +346,19 @@ function hostPeer(){
     c.on("data",function(m){
       if(c!==conn)return; lastRx=Date.now();
       if(m.t==="ping"){ try{c.send({t:"pong"});}catch(e){} }
-      else if(m.t==="hi"){
-        if(G){ closed=false; broadcast(); }
-        else{
-          G=dealInto({code:code,p0:{name:myName},p1:{name:String(m.name).slice(0,16)},log:""},0);
-          G.log="Jogo iniciado! "+myName+" começa."; broadcast();
-        }
-      }else if(m.t==="play"){ applyPlay(1,m.c); broadcast(); }
-      else if(m.t==="rematch"){ applyRematch(); broadcast(); }
+      else handleMsg(m);
     });
     c.on("close",function(){ if(c!==conn)return; if(S&&S.status!=="waiting"){closed=true;render();} });
   });
 }
 function createRoom(nm){
-  if(!needPeer())return;
   left=false; resuming=false; myName=nm; saveName(); code=genCode(); isHost=true; me=0; G=null; S=null; hostTries=0;
-  wake(); hostPeer(); render();
+  mode="peer"; gid=""; gLast=0; gV=0; gOut=[]; gW={}; gCreating=false; clearTimeout(hostFB);
+  wake();
+  if(typeof Peer==="undefined"){ gistHost(); return; } /* biblioteca do PeerJS nem carregou */
+  hostPeer(); render();
+  /* se o servidor do PeerJS não responder em 8 s, troca para o Gist */
+  hostFB=setTimeout(function(){ if(!left&&isHost&&mode==="peer"&&!S&&!G)gistHost(); },8000);
 }
 
 function scheduleGuestRetry(){
@@ -226,7 +372,7 @@ function guestConnect(){
   var fresh=!S&&!resuming;
   function fail(msg){
     if(p!==peer||left)return;
-    if(fresh){ err=msg; S=null; try{p.destroy();}catch(e){} peer=null; conn=null; render(); }
+    if(fresh){ try{p.destroy();}catch(e){} peer=null; conn=null; gistJoin(msg); } /* tenta achar a sala no Gist */
     else{ closed=true; render(); scheduleGuestRetry(); }
   }
   p.on("error",function(e){ fail(e.type==="peer-unavailable"?"Sala não encontrada.":"Erro de rede: "+e.type); });
@@ -246,11 +392,23 @@ function guestConnect(){
   });
 }
 function joinRoom(c,nm){
-  if(!needPeer())return;
   left=false; resuming=false; code=c.toUpperCase().trim(); myName=nm; saveName(); isHost=false; me=1; S=null;
-  err="Conectando…"; wake(); render(); guestConnect();
+  mode="peer"; gid=""; gV=0; gOut=[]; gW={}; gGen++;
+  err="Conectando…"; wake(); render();
+  if(typeof Peer==="undefined") gistJoin("Não foi possível carregar a biblioteca de rede."); else guestConnect();
 }
 function resumeSession(s){
+  if(s.mode==="gist"&&s.gid){
+    left=false; code=s.code; myName=s.name; isHost=!!s.host; me=isHost?0:1; wake();
+    mode="gist"; gid=s.gid; gLast=s.gts||0; gV=0; gW={}; gOut=[]; gGen++;
+    if(isHost){
+      G=s.G||null; S=G?G:{status:"waiting",code:code,p0:{name:myName}}; if(G)shownSeq=G.seq||0; resuming=false;
+      gistStartLoop(); if(G)gistPush();
+    }else{
+      resuming=true; gistStartLoop(); gistSend({t:"hi",name:myName});
+    }
+    render(); return;
+  }
   if(!needPeer())return;
   left=false; resuming=true; code=s.code; myName=s.name; isHost=!!s.host; me=isHost?0:1; wake();
   if(isHost){ G=s.G||null; if(G){S=G;shownSeq=G.seq||0;closed=true;} hostTries=0; hostPeer(); }
@@ -259,6 +417,7 @@ function resumeSession(s){
 }
 function ensureAlive(){
   if(left||!code||(!S&&!resuming))return;
+  if(mode==="gist"){ if(gid)gistStartLoop(); return; } /* força uma consulta imediata */
   if(isHost){
     if(!peer||peer.destroyed) hostPeer();
     else if(peer.disconnected){ try{peer.reconnect();}catch(e){} }
@@ -282,6 +441,10 @@ setInterval(function(){
 
 function leave(){
   left=true; clearTimeout(retryTimer); retryTimer=null; resuming=false;
+  var dg=(mode==="gist"&&isHost&&gid)?gid:"";
+  gGen++; gPoll++; clearTimeout(gTimer); clearTimeout(hostFB);
+  if(dg){ try{GH("DELETE","/gists/"+dg).catch(function(){});}catch(e){} }
+  mode="peer"; gid=""; gOut=[]; gLast=0; gV=0; gW={}; gEtag=""; gCreating=false; gLooking=false;
   var p=peer; peer=null; var c=conn; conn=null;
   try{if(c)c.close();if(p)p.destroy();}catch(e){}
   unwake(); clearSess();
@@ -289,6 +452,7 @@ function leave(){
 }
 function act(msg){
   if(isHost){ if(msg.t==="play")applyPlay(0,msg.c); else applyRematch(); broadcast(); }
+  else if(mode==="gist"){ gistSend(msg); }
   else if(conn&&conn.open){ conn.send(msg); }
 }
 function playCard(c){
@@ -340,7 +504,7 @@ function render(){
   }
   var opp=1-me, over=S.status==="over", myTurn=S.turn===me&&!over, oppName=S["p"+opp].name;
   var holding=!!(S.last&&Date.now()<holdUntil), canPlay=myTurn&&!holding;
-  var h='<div class="bar"><h1 style="margin:0">🃏 Bisca</h1><span class="pill">Sala '+S.code+'</span><span class="pill">Trunfo '+SU[S.trump]+'</span><span class="pill">Vitórias '+(S["w"+me]||0)+' × '+(S["w"+opp]||0)+'</span><button class="sec" id="lv" style="color:#fff">Sair</button></div>';
+  var h='<div class="bar"><h1 style="margin:0">🃏 Bisca</h1><span class="pill">Sala '+S.code+'</span>'+(mode==="gist"?'<span class="pill">via Gist</span>':'')+'<span class="pill">Trunfo '+SU[S.trump]+'</span><span class="pill">Vitórias '+(S["w"+me]||0)+' × '+(S["w"+opp]||0)+'</span><button class="sec" id="lv" style="color:#fff">Sair</button></div>';
   if(closed) h+='<div class="turn">⚠️ Conexão perdida. Tentando reconectar…</div>';
   if(isHost&&me===0){
     /* Vantagem do criador da sala: olho para espiar as cartas do adversário.
